@@ -1,5 +1,32 @@
 # MUPPET: Rainbow Connection - .gitignore
 
+# ============================================================
+# SECURITY: Credentials, API Keys, Secrets (NEVER COMMIT!)
+# ============================================================
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*
+*secrets*
+*password*
+*token*
+*api_key*
+config/credentials.yml
+config/secrets.yml
+.credentials/
+.secrets/
+service-account*.json
+gcp-credentials.json
+aws-credentials.json
+.aws/
+.gcp/
+ssh_keys/
+*.id_rsa*
+*.id_ed25519*
+
 # Results directories (generated data, not committed)
 workflows/*/results/
 workflows/*/inputs/tmp/
