@@ -1,0 +1,89 @@
+# MUPPET: Rainbow Connection - .gitignore
+
+# Results directories (generated data, not committed)
+workflows/*/results/
+workflows/*/inputs/tmp/
+workflows/*/inputs/SAVE/
+workflows/*/inputs/*.save/
+workflows/*/inputs/*_gw/
+workflows/*/inputs/*_bse/
+workflows/*/inputs/r_*
+workflows/*/inputs/l_*
+workflows/*/inputs/o-*
+workflows/*/inputs/*.log
+workflows/*/inputs/*.in~
+workflows/*/inputs/*.out
+
+# Generated material files (converter outputs)
+lib/materials/*.json
+lib/converters/*.json
+lib/converters/*.png
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Pseudopotentials (large files, download separately)
+shared/pseudo/*.UPF
+shared/pseudo/*.upf
+!shared/pseudo/README.md
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Compiled object files
+*.o
+*.mod
+*.a
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+*.log
+
+# HDF5 files (large)
+*.h5
+*.hdf5
+
+# Wannier90
+*.mmn
+*.amn
+*.eig
+*.nnkp
+*.wout
+*.chk
+
+# QE/Yambo intermediate files
+*.wfc*
+*.igk*
+*.hub*
+wfc*.dat
+charge-density.dat
+data-file-schema.xml
+
+# Benchmarking data (keep scripts, not output)
+benchmarks/*/data/
+benchmarks/*/results/

@@ -1,0 +1,159 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Page not Found - QUANTUMESPRESSO</title>
+    <meta name="generator" content="GravCMS" />
+<meta name="description" content="Grav is an easy to use, yet powerful, open source flat-file CMS" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="robots" content="follow, all" />
+<meta name="google-site-verification" content="g4CG61y_kLfkqAsfUPkF2MefchgN00GozvDUZMeK4z8" />        <link rel="canonical" href="https://pseudopotentials.quantum-espresso.org/" />
+
+                                                    
+                                
+        <link href="/user/themes/quantum/css/style.css" type="text/css" rel="stylesheet">
+<link href="/user/themes/quantum/css/style-red.css" type="text/css" rel="stylesheet">
+<link href="/user/themes/quantum/css/superfish.css" type="text/css" rel="stylesheet">
+<link href="/user/themes/quantum/css/bootstrap.css" type="text/css" rel="stylesheet">
+<link href="/user/themes/quantum/css/prettyPhoto.css" type="text/css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css?family=Lato:300" type="text/css" rel="stylesheet">
+<link href="/user/plugins/markdown-notices/assets/notices.css" type="text/css" rel="stylesheet">
+<link href="/user/plugins/mathjax/assets/css/mathjax.css" type="text/css" rel="stylesheet">
+<link href="/user/plugins/login/css/login.css" type="text/css" rel="stylesheet">
+<link href="/user/plugins/form/assets/form-styles.css" type="text/css" rel="stylesheet">
+
+
+                                                    
+        
+        
+
+        <script src="/user/themes/quantum/js/jquery.js"></script>
+<script src="/user/plugins/mathjax/assets/js/mathjax.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+<script src="/user/themes/quantum/js/jquery.cycle.all.js"></script>
+<script src="/user/themes/quantum/js/custom.js"></script>
+<script src="/user/themes/quantum/js/superfish.js"></script>
+<script src="/user/themes/quantum/js/jquery.prettyPhoto.js"></script>
+<script src="/user/themes/quantum/js/functions.js"></script>
+<script>
+
+</script>
+
+
+</head>
+<body class="">
+  <div id="outer-container">
+    <div id="inner-container">
+    <!-- BEGIN HEADER -->
+      <div id="header">
+        <div id="logo">
+          <a href="/">
+            <img src="/user/themes/quantum/images/logo_header.jpg" alt="QUANTUMESPRESSO" />
+          </a>                  
+        </div>
+        
+
+
+
+
+
+
+
+
+  
+        <div id="nav-menu">
+             
+<ul id="menu-menu" class="sf-menu">
+    <li class="menu-item" >  
+    <a class="sf-with-ul" href="http://www.quantum-espresso.org">
+      HOME
+    </a>
+    </li>  
+                                    <li class=" menu-item ">
+                <a  href="/" >
+                    Pseudopotentials
+                </a>
+            </li>
+            
+</ul>
+
+        </div>
+      </div>
+      <!-- END OF HEADER -->
+      <!-- BEGIN CONTENT -->
+        <div id="content">
+    <div id="left-bar">
+      <div class="left-bar-content">
+        <ul class="leftbar-list">
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="/bibtex-format" title="BibTeX format">BibTeX format</a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="/full-ref" title="Full reference">Full reference</a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="/quote" title="quote">quote</a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                                  <li class="page_item"><a href="" title=""></a></li>
+                    
+        </ul>
+     </div>
+  </div>
+
+  <div id="content-right">
+    <div id="page-title">
+      <h1>ERROR 404</h1>
+    </div>
+    <div class="maincontent">
+      Woops. Looks like this page doesn't exist.
+    </div>
+  </div>
+
+  
+      <!-- BEGIN FOOTER -->
+      <div id="footer">
+        <div class="footer-logo">
+               <a href="https://foundation.quantum-espresso.org">
+               <img src="/user/themes/quantum/images/logo_qef_cropped.jpg" alt="QUANTUM Espresso Foundation" /> 
+               </a>
+                       <a href="http://www.max-centre.eu/" align="right">
+		<img src="/user/themes/quantum/images/MAX_logo.png" alt="Quantum Espresso is a flaghip code of the MaX CoE">
+               </a>
+
+       </div>
+        <div class="footer-cite">
+          What I cannot <span class="red">compute</span>, I do not understand (adapted from Richard P. Feynman)<br />
+        </div>
+        <div class="footer-text">      
+          
+        </div>
+       
+      </div>            
+    <div class="footer-logo">
+    </div>
+
+                  <!-- END OF FOOTER -->                      
+    </div>
+
+  </div>
+
+</body>
+</html>
