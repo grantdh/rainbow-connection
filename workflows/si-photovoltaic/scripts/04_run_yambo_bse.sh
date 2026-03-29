@@ -29,6 +29,34 @@ if [ ! -f "r_setup" ]; then
     exit 1
 fi
 
+# First, compute screening (W) - required for BSE kernel
+if [ ! -f "ndb.em1s" ] && [ ! -d "SAVE/ndb.em1s*" ]; then
+    echo "Computing screened interaction (W) for BSE kernel..."
+    echo "  This is required before BSE can run"
+    echo ""
+
+    # Generate screening input
+    yambo -o c -V all > yambo_screening_template.log 2>&1
+    mv yambo.in yambo_screening.in
+
+    # Edit for quick calculation
+    sed -i '' 's/%BndsRnXs/%BndsRnXs                        # [Xs] Polarization function bands/' yambo_screening.in
+    sed -i '' 's/1 | 20 |/3 | 6 |/' yambo_screening.in
+
+    echo "Running screening calculation..."
+    yambo -F yambo_screening.in -J screening 2>&1 | tee yambo_screening.log
+
+    # Copy screening database to SAVE
+    if [ -d "screening/ndb.em1s" ]; then
+        cp -r screening/ndb.em1s* SAVE/ 2>/dev/null || true
+        echo "✓ Screening database created"
+        echo ""
+    else
+        echo "✗ Screening calculation failed"
+        exit 1
+    fi
+fi
+
 # Generate BSE input file
 if [ ! -f "yambo_bse.in" ]; then
     echo "Generating BSE input file..."

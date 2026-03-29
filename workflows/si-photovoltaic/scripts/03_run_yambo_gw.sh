@@ -66,16 +66,31 @@ if [ -f "o-si_gw.qp" ]; then
 
     # Extract band gap correction
     echo "GW quasiparticle corrections:"
-    echo "  K-point  Band  E_DFT(eV)  E_GW-E_DFT(eV)  Z"
-    echo "  -----------------------------------------------"
-    grep -A 20 "# K-point" o-si_gw.qp | grep -v "^#" | awk '{if(NF>3) print "  " $1 "        " $2 "     " $3 "      " $4 "         " $7}'
+    echo "  K-point  Band  E_DFT(eV)  E_GW-E_DFT(eV)"
+    echo "  --------------------------------------------"
+    awk '!/^#/ && NF>=4 {printf "  %3s      %3s     %8.3f      %+8.3f\n", $1, $2, $3, $4}' o-si_gw.qp
 
-    # Calculate band gap
-    vbm=$(grep -A 20 "# K-point" o-si_gw.qp | grep -v "^#" | awk '$2==4 {print $3+$4}' | head -1)
-    cbm=$(grep -A 20 "# K-point" o-si_gw.qp | grep -v "^#" | awk '$2==5 {print $3+$4}' | tail -1)
-
+    # Calculate band gap (simple awk, no bc needed)
     echo ""
-    echo "Estimated GW band gap: $(echo "$cbm - $vbm" | bc -l | xargs printf "%.3f") eV"
+    echo "Band gap estimate:"
+    awk '
+    BEGIN {vbm_found=0; cbm_found=0}
+    !/^#/ && NF>=4 {
+        e_qp = $3 + $4
+        if ($2 == 4 && !vbm_found) {vbm = e_qp; vbm_k=$1; vbm_found=1}
+        if ($2 == 5 && !cbm_found) {cbm = e_qp; cbm_k=$1; cbm_found=1}
+    }
+    END {
+        if (vbm_found && cbm_found) {
+            gap = cbm - vbm
+            printf "  VBM (K%s, band 4): %.3f eV\n", vbm_k, vbm
+            printf "  CBM (K%s, band 5): %.3f eV\n", cbm_k, cbm
+            printf "  GW gap: %.3f eV\n", gap
+        } else {
+            print "  Could not extract band gap"
+        }
+    }
+    ' o-si_gw.qp
     echo ""
     echo "Note: This is NOT converged! Full convergence requires:"
     echo "  - 8×8×8 k-grid"

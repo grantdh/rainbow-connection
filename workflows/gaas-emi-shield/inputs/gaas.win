@@ -1,5 +1,5 @@
 num_bands = 16
-num_wann  = 8
+num_wann  = 9
 
 begin unit_cell_cart
 bohr
@@ -14,12 +14,12 @@ As  0.25  0.25  0.25
 end atoms_frac
 
 begin projections
-Ga: sp3
-As: sp3
+Ga: l=0;l=1;l=2
+As: l=0;l=1
 end projections
 
 dis_win_max = 20.0
-dis_froz_max = 7.7
+dis_froz_max = 7.5
 dis_num_iter = 200
 num_iter = 200
 

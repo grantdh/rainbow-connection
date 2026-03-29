@@ -1,0 +1,32 @@
+MUPPET QGT → ε(ω) Pipeline: Si
+============================================================
+Reading /Users/grantheileman/Dev/silicon-forge/workflows/si-qgt/inputs/si.mmn...
+  16 bands, 512 k-points, 8 neighbors/k-point
+  Occupied bands: 4
+  Band gap: 0.6183 eV (DFT)
+  VBM: 6.2073 eV
+  CBM: 6.8255 eV
+  Ω_I (Wannier spread): 2.15 Å²
+
+Computing interband σ(ω)...
+
+Dielectric function:
+  ε₁(0) = 11.7 (target: 11.7)
+  ε₂ peak = 1.85 at 0.01 eV
+
+Optical properties at key energies:
+    Energy       n         κ       R     α(cm⁻¹)
+      0.49    1.84    0.0129   0.088         642
+      0.99    1.49    0.0105   0.039        1055
+      1.49    1.37    0.0108   0.024        1636
+      1.99    1.31    0.0136   0.018        2738
+      2.99    1.31    0.0591   0.018       17939
+      3.99    1.14    0.1719   0.011       69567
+
+============================================================
+Quantum geometric invariants:
+  Ω_I = 2.15 Å² (gauge-invariant Wannier spread)
+  This enters Hold the Line Eq. 14 (capacitance ratio)
+
+Saved: si_epsilon.json
+Saved: si_epsilon.png

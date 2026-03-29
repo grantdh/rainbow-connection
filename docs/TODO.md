@@ -9,7 +9,7 @@ These must be done before the first GitHub push.
 - [ ] **Git init and first commit**
   - `git init`, `.gitignore` (results/, *.pyc, __pycache__, .DS_Store)
   - Commit all docs, env.sh, converters, workflow scripts, solver READMEs
-  - Push to `TechnologyResidue/muppet-rainbow-connection`
+  - Push to `grantdh/rainbow-connection`
 
 - [ ] **LICENSE file** — Apache 2.0
 

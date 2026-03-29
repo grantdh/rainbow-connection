@@ -31,7 +31,7 @@ These have multiple consumers. They don't know or care who calls them.
 **What:** Metal-native DD arithmetic BLAS. Emulates FP64 via FP32x2 pairs on Apple Silicon GPUs.
 
 **Repo:** `~/apple-bottom` → `~/Dev/arm/metal-algos`  
-**GitHub:** `TechnologyResidue/apple-bottom`  
+**GitHub:** `grantdh/apple-bottom`  
 **Status:** WORKING. Production kernels validated.
 
 **Key results:**
@@ -159,8 +159,8 @@ export OMPI_FC=/opt/homebrew/bin/gfortran-15
 
 **What:** Multi-Physics Unified Pipeline for Photonic Engineering and Technology. Orchestrates QE, Yambo, MEEP, and thermal solvers. Contains converters, workflow scripts, the QGT module, and documentation.
 
-**Repo:** `~/silicon-forge` → `~/Dev/silicon-forge`  
-**GitHub target:** `TechnologyResidue/muppet-rainbow-connection`  
+**Repo:** `~/silicon-forge` → `~/Dev/silicon-forge`
+**GitHub target:** `grantdh/rainbow-connection`
 **Status:** FUNCTIONAL (first end-to-end QE → Yambo → MEEP completed)
 
 **Key components:**

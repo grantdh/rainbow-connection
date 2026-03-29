@@ -33,8 +33,8 @@ Each solver is GPU-accelerated on Apple Silicon where it matters:
 
 ```bash
 # Clone
-git clone https://github.com/grantdh/muppet-rainbow-connection.git
-cd muppet-rainbow-connection
+git clone https://github.com/grantdh/rainbow-connection.git
+cd rainbow-connection
 
 # Load environment
 bash
@@ -66,7 +66,7 @@ The "infrared" step is where it gets interesting: temperature affects the band g
 ## Project Structure
 
 ```
-muppet-rainbow-connection/
+rainbow-connection/
 ├── README.md                    # This file
 ├── ARCHITECTURE.md              # Technical design (for developers and Claude Code)
 ├── CLAUDE.md                    # Instructions for Claude Code
@@ -155,7 +155,7 @@ OpenMP threading provides zero speedup for MEEP on Apple Silicon. A single CPU c
   title = {MUPPET: Rainbow Connection — Multiphysics Unified Pipeline for Photonic Engineering and Technology},
   year = {2026},
   publisher = {Grant D. Heileman Ph.D.},
-  url = {https://github.com/grantdh/muppet-rainbow-connection}
+  url = {https://github.com/grantdh/rainbow-connection}
 }
 ```
 

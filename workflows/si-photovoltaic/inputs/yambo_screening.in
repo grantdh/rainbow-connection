@@ -1,0 +1,102 @@
+#                                                                     
+#   __   __     _        __  __       ____      U  ___  u             
+#   \ \ / / U  /"\  U u |" \/ "| u U | __") u    \/"_ \/              
+#    \ V /   \/ _ \/   \| |\/| |/   \|  _ \/     | | | |              
+#   U_|"|_u  / ___ \    | |  | |     | |_) | .-,_| |_| |              
+#     |_|   /_/   \_\   |_|  |_|     |____/   \_)-\___/               
+# .-,//|(_   \\    >>  <<,-,,-.     _|| \\_        \\                 
+#  \_) (__) (__)  (__)  (./  \.)   (__) (__)      (__)                
+#                                                                     
+#                                                                     
+# Version 5.3.0 Revision 23959 Hash (prev commit) 16f94b12c           
+#                    Branch is master                                 
+#              MPI+OpenMP+SLK+HDF5_IO Build                           
+#                http://www.yambo-code.eu                             
+#
+optics                           # [R] Linear Response optical properties
+infver                           # [R] Input file variables verbosity
+chi                              # [R][CHI] Dyson equation for Chi.
+dipoles                          # [R] Oscillator strenghts (or dipoles)
+StdoHash=  40                    # [IO] Live-timing Hashes
+Nelectro= 8.000000               # Electrons number
+ElecTemp= 0.000000         eV    # Electronic Temperature
+BoseTemp=-1.000000         eV    # Bosonic Temperature
+OccTresh= 0.100000E-4            # Occupation treshold (metallic bands)
+NLogCPUs=0                       # [PARALLEL] Live-timing CPU`s (0 for all)
+DBsIOoff= "none"                 # [IO] Space-separated list of DB with NO I/O. DB=(DIP,X,HF,COLLs,J,GF,CARRIERs,OBS,W,SC,BS,ALL)
+DBsFRAGpm= "none"                # [IO] Space-separated list of +DB to FRAG and -DB to NOT FRAG. DB=(DIP,X,W,HF,COLLS,K,BS,QINDX,RT,ELP
+#DegFix                        # Force the code to impose the energy levels to respect their degeneracy
+FFTGvecs= 1067             RL    # [FFT] Plane-waves
+#WFbuffIO                      # [IO] Wave-functions buffered I/O
+PAR_def_mode= "balanced"         # [PARALLEL] Default distribution mode ("balanced"/"memory"/"workload"/"KQmemory")
+DIP_CPU= ""                      # [PARALLEL] CPUs for each role
+DIP_ROLEs= ""                    # [PARALLEL] CPUs roles (k,c,v)
+DIP_Threads=0                    # [OPENMP/X] Number of threads for dipoles
+X_CPU= ""                        # [PARALLEL] CPUs for each role
+X_ROLEs= ""                      # [PARALLEL] CPUs roles (q,g,k,c,v)
+X_nCPU_LinAlg_INV=-1             # [PARALLEL] CPUs for Linear Algebra (if -1 it is automatically set)
+X_Threads=0                      # [OPENMP/X] Number of threads for response functions
+NonPDirs= "none"                 # [X/BSS] Non periodic chartesian directions (X,Y,Z,XY...)
+% MolPos
+ 0.000000 | 0.000000 | 0.000000 |        # [X/BSS] Molecule coord in supercell, 0.5 is the middle
+%
+Chimod= "IP"                     # [X] IP/Hartree/ALDA/LRC/PF/BSfxc
+ChiLinAlgMod= "LIN_SYS"          # [X] inversion/lin_sys,cpu/gpu
+% DipBands
+  1 | 20 |                           # [DIP] Bands range for dipoles
+%
+#DipBandsALL                   # [DIP] Compute all bands range, not only valence and conduction
+DipApproach= "G-space v"         # [DIP] [G-space v/R-space x/Covariant/Shifted grids]
+DipComputed= ""                  # [DIP] [default R P V; extra P2 Spin Orb]
+#DipPDirect                    # [DIP] Directly compute <v> also when using other approaches for dipoles
+ShiftedPaths= ""                 # [DIP] Shifted grids paths (separated by a space)
+DipoleEtresh= 0.100000E-4  eV    # [DIP] Treshold in the definition of R=P/deltaE
+% QpntsRXd
+  1 | 19 |                           # [Xd] Transferred momenta
+%
+% BndsRnXd
+  1 | 20 |                           # [Xd] Polarization function bands
+%
+GrFnTpXd= "T"                    # [Xd] Green`s function (T)ordered,(R)etarded,(r)senant,(a)ntiresonant [T, R, r, Ta, Ra]
+% EnRngeXd
+  0.00000 | 10.00000 |         eV    # [Xd] Energy range
+%
+% DmRngeXd
+ 0.100000 | 0.100000 |         eV    # [Xd] Damping range
+%
+DmERefXd= 0.000000         eV    # [Xd] Damping reference energy
+CGrdSpXd= 100.0000               # [Xd] [o/o] Coarse grid controller
+ETStpsXd= 100                    # [Xd] Total Energy steps
+EMStpsXd= 100.0000               # [Xd] [o/o] Memory Energy steps
+DrudeWXd= ( 0.000000 , 0.000000 )  eV    # [Xd] Drude plasmon
+% EhEngyXd
+-1.000000 |-1.000000 |         eV    # [Xd] Electron-hole energy range
+%
+% LongDrXd
+ 1.000000 | 0.000000 | 0.000000 |        # [Xd] [cc] Electric Field
+%
+#DrClassic                     # [X] Use a classical model for the drude term
+XfnQPdb= "none"                  # [EXTQP Xd] Database action
+XfnQP_INTERP_NN= 1               # [EXTQP Xd] Interpolation neighbours (NN mode)
+XfnQP_INTERP_shells= 20.00000    # [EXTQP Xd] Interpolation shells (BOLTZ mode)
+XfnQP_DbGd_INTERP_mode= "NN"     # [EXTQP Xd] Interpolation DbGd mode
+% XfnQP_E
+ 0.000000 | 1.000000 | 1.000000 |        # [EXTQP Xd] E parameters  (c/v) eV|adim|adim
+%
+XfnQP_Z= ( 1.000000 , 0.000000 )         # [EXTQP Xd] Z factor  (c/v)
+XfnQP_Wv_E= 0.000000       eV    # [EXTQP Xd] W Energy reference  (valence)
+% XfnQP_Wv
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP Xd] W parameters  (valence) eV| 1|eV^-1
+%
+XfnQP_Wv_dos= 0.000000     eV    # [EXTQP Xd] W dos pre-factor  (valence)
+XfnQP_Wc_E= 0.000000       eV    # [EXTQP Xd] W Energy reference  (conduction)
+% XfnQP_Wc
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP Xd] W parameters  (conduction) eV| 1 |eV^-1
+%
+XfnQP_Wc_dos= 0.000000     eV    # [EXTQP Xd] W dos pre-factor  (conduction)
+% Qdirection
+ 0.000000 | 0.000000 | 0.000000 |        # [Xd] Transferred momentum direction (iku)
+%
+QShiftOrder= 1                   # [Xd] Pick-up the (QShiftOrder)th q+G vector
+DbGdQsize=-1.000000              # [X,DbGd][o/o] Percentual of the total DbGd transitions to be used
+Gauge= "length"                  # [BSE/X] Gauge (length|velocity)

@@ -17,7 +17,7 @@ Grant Heileman, UNM ECE, graduating 2026. Principal engineer level. Prefers dire
 ~/silicon-forge              (symlink)
 ```
 
-GitHub target: `TechnologyResidue/muppet-rainbow-connection`
+GitHub target: `grantdh/rainbow-connection`
 
 ## Related Projects (DO NOT MODIFY)
 
@@ -148,7 +148,7 @@ The Si photovoltaic workflow should produce:
 
 See TODO.md for the full prioritized list. The immediate goals are:
 
-1. Get the repo committed to GitHub as muppet-rainbow-connection
+1. Get the repo committed to GitHub as rainbow-connection
 2. Fix ε∞ lower bound in the Lorentzian fitter
 3. Write run_all.sh for the si-photovoltaic workflow
 4. Build the iterative thermal loop (the "infrared" in the rainbow)
