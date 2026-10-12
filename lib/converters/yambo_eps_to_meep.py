@@ -37,11 +37,16 @@ def read_yambo_eps(filename):
     eps1_bse = []  # Re[eps] with BSE
     eps2_ip = []   # Im[eps] independent particle
     eps1_ip = []   # Re[eps] independent particle
+    resonant_only = False  # BSEmod="resonant": Re[eps] lacks anti-resonant poles
 
     with open(filename) as f:
         for line in f:
             line = line.strip()
-            if not line or line.startswith('#'):
+            if line.startswith('#'):
+                if "Green`s Function" in line and line.endswith('Resonant'):
+                    resonant_only = True
+                continue
+            if not line:
                 continue
             vals = line.split()
             if len(vals) >= 5:
@@ -57,7 +62,27 @@ def read_yambo_eps(filename):
         'eps1_bse': np.array(eps1_bse),
         'eps2_ip': np.array(eps2_ip),
         'eps1_ip': np.array(eps1_ip),
+        'resonant_only': resonant_only,
     }
+
+
+def add_antiresonant(energy_eV, eps1, eps2, eta=0.1):
+    """Restore the anti-resonant term missing from a resonant-only ε₁.
+
+    Yambo's BSEmod="resonant" (header "Green`s Function : Resonant") keeps
+    only the poles 1/(E_λ − ω − iη), so the ε₁ it writes is the one-sided
+    Hilbert transform of ε₂: ε₁(0) − 1 comes out half the causal value. The
+    dropped poles 1/(E_λ + ω + iη) add only to Re ε for ω ≥ 0:
+
+        Δε₁(ω) = (1/π) ∫ ε₂(ω') (ω' + ω) / ((ω' + ω)² + η²) dω'
+
+    η (eV, Yambo's default damping) regularises the ω' → 0 broadening tail of
+    ε₂. Transitions above the energy window are left out; ε∞ absorbs them.
+    """
+    from scipy.integrate import trapezoid
+
+    x = energy_eV[:, None] + energy_eV[None, :]
+    return eps1 + trapezoid(eps2 * x / (x**2 + eta**2), energy_eV, axis=1) / np.pi
 
 
 def lorentzian_eps(omega_eV, eps_inf, poles):
@@ -74,13 +99,32 @@ def lorentzian_eps(omega_eV, eps_inf, poles):
 
 def fit_lorentzian(energy_eV, eps1, eps2, n_poles=3, eps_inf_guess=1.0):
     """Fit ε(ω) = ε₁ + iε₂ to a sum of Lorentzian oscillators.
-    
-    Uses least-squares on both real and imaginary parts simultaneously.
+
+    Uses least-squares on both real and imaginary parts simultaneously, with
+    the static sum rule ε∞ + Σσₙ = ε₁(0) imposed exactly.
+
+    Energies and pole parameters ω_n, γ_n are in eV; ε∞ and σ_n are dimensionless.
+
+    Why a sum rule rather than a bound on ε∞: at ω = 0 the model gives
+    ε(0) = ε∞ + Σσₙ, so the sub-gap ε₁ (and with it n and the reflectance
+    below the gap) is set by that sum, not by ε∞ alone. Left free, the fit
+    trades ε₁(0) for a closer match to the ε₂ peaks and to the negative ε₁
+    above E₂, and the static value lands wherever that compromise puts it;
+    ε∞ sitting on its 1.0 floor was a symptom, not the cause. Pinning
+    ε∞ ≈ ε₁(0) instead forces Σσₙ → 0, and the poles can no longer reproduce
+    ε₂. With the sum rule the poles share ε₁(0) − ε∞ between them, and
+    ε∞ ∈ [1, ε₁(0)] stays free to stand for transitions above the fitted
+    window (ε∞ = 1 just means the window holds all the oscillator strength).
+
+    The sum rule assumes ε₁ is the Kramers-Kronig partner of ε₂; pass
+    resonant-only BSE spectra through add_antiresonant() first.
     """
     from scipy.optimize import least_squares
 
-    # Build target complex epsilon
-    eps_target = eps1 + 1j * eps2
+    eps_static = eps1[np.argmin(energy_eV)]
+    if eps_static <= 1.0:
+        raise ValueError(f"ε₁(0) = {eps_static:.3f} ≤ 1: no Lorentz model with "
+                         f"ε∞ ≥ 1 and σ ≥ 0 can reproduce it")
 
     # Initial guesses: distribute poles across the energy range
     e_min = energy_eV[energy_eV > 0.1].min()
@@ -97,32 +141,34 @@ def fit_lorentzian(energy_eV, eps1, eps2, n_poles=3, eps_inf_guess=1.0):
         peaks.append(e_min + (e_max - e_min) * (len(peaks) + 1) / (n_poles + 1))
     peaks = sorted(peaks[:n_poles])
 
-    # Parameter vector: [eps_inf, omega_1, gamma_1, sigma_1, omega_2, ...]
-    x0 = [eps_inf_guess]
+    # Parameter vector: [eps_inf, omega_1, gamma_1, w_1, omega_2, ...]
+    # w_n are relative weights: σ_n = (ε₁(0) − ε∞) w_n / Σw, so the sum rule
+    # holds exactly for every trial vector.
+    x0 = [np.clip(eps_inf_guess, 1.0, eps_static)]
     for i, peak in enumerate(peaks):
         x0.extend([
             peak,           # omega_n (eV)
             0.5,            # gamma_n (eV) — moderate damping
-            2.0,            # sigma_n — oscillator strength
+            2.0,            # w_n: relative oscillator strength
         ])
     x0 = np.array(x0)
 
     # Bounds: all physical (positive frequencies, damping, strengths)
-    lb = [1.0]  # eps_inf >= 1.0 (vacuum is the physical floor)
-    ub = [20.0]
+    lb = [1.0]          # eps_inf >= 1.0 (vacuum is the physical floor)
+    ub = [eps_static]   # eps_inf <= eps1(0) (all strength in the background)
     for _ in range(n_poles):
-        lb.extend([0.01, 0.01, 0.001])   # omega, gamma, sigma > 0
+        lb.extend([0.01, 0.01, 0.001])   # omega, gamma, w > 0
         ub.extend([e_max * 1.5, 10.0, 50.0])
     lb = np.array(lb)
     ub = np.array(ub)
 
-    def residual(x):
+    def unpack(x):
         eps_inf = x[0]
-        poles = []
-        for i in range(n_poles):
-            idx = 1 + i * 3
-            poles.append((x[idx], x[idx+1], x[idx+2]))
-        
+        sigmas = (eps_static - eps_inf) * x[3::3] / x[3::3].sum()
+        return eps_inf, list(zip(x[1::3], x[2::3], sigmas))
+
+    def residual(x):
+        eps_inf, poles = unpack(x)
         eps_model = lorentzian_eps(energy_eV, eps_inf, poles)
         
         # Residual on both real and imaginary parts
@@ -134,15 +180,8 @@ def fit_lorentzian(energy_eV, eps1, eps2, n_poles=3, eps_inf_guess=1.0):
                           method='trf', max_nfev=10000)
 
     # Extract fitted parameters
-    eps_inf = result.x[0]
-    poles = []
-    for i in range(n_poles):
-        idx = 1 + i * 3
-        poles.append({
-            'omega_eV': result.x[idx],
-            'gamma_eV': result.x[idx + 1],
-            'sigma': result.x[idx + 2],
-        })
+    eps_inf, fitted = unpack(result.x)
+    poles = [{'omega_eV': w, 'gamma_eV': g, 'sigma': s} for w, g, s in fitted]
 
     return eps_inf, poles, result
 
@@ -221,7 +260,11 @@ def main():
     else:
         eps1, eps2 = data['eps1_bse'], data['eps2_bse']
         print("Using BSE spectrum (includes excitonic effects)")
-    
+    if data['resonant_only']:
+        eps1 = add_antiresonant(energy, eps1, eps2)
+        print("  Resonant-only output (BSEmod=\"resonant\"): restored anti-resonant term in ε₁")
+    eps_static = eps1[np.argmin(energy)]
+
     print(f"  Energy range: {energy.min():.2f} - {energy.max():.2f} eV ({len(energy)} points)")
     print(f"  ε₁(0) = {eps1[0]:.2f} (static dielectric constant)")
     print(f"  ε₂ peak = {eps2.max():.2f} at {energy[np.argmax(eps2)]:.2f} eV")
@@ -234,6 +277,8 @@ def main():
     for i, p in enumerate(poles):
         print(f"  Pole {i+1}: ω = {p['omega_eV']:.3f} eV, "
               f"γ = {p['gamma_eV']:.3f} eV, σ = {p['sigma']:.4f}")
+    sigma_sum = sum(p['sigma'] for p in poles)
+    print(f"  ε_∞ + Σσ = {eps_inf + sigma_sum:.4f} (ε₁(0) = {eps_static:.4f})")
     print(f"  Fit residual: {result.cost:.6f}")
 
     # Evaluate fit quality
@@ -256,6 +301,8 @@ def main():
         'source_file': os.path.basename(args.input),
         'spectrum_type': 'IP' if args.use_ip else 'BSE',
         'eps_inf': float(eps_inf),
+        'eps_static': float(eps_static),
+        'antiresonant_restored': data['resonant_only'],
         'poles': poles,
         'fit_residual': float(result.cost),
         'rms_eps1': float(rms_eps1),
