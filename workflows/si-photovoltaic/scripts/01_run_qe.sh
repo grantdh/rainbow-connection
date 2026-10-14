@@ -7,7 +7,7 @@ set -e  # Exit on error
 # Load environment
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORKFLOW_DIR="$(dirname "$SCRIPT_DIR")"
-source ~/Dev/silicon-forge/env.sh
+source ~/Dev/Claude/rainbow-connection/env.sh
 
 echo "========================================="
 echo "MUPPET: Si Photovoltaic Workflow"

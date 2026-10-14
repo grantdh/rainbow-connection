@@ -1,6 +1,6 @@
 MUPPET QGT → ε(ω) Pipeline: Si
 ============================================================
-Reading /Users/grantheileman/Dev/silicon-forge/workflows/si-qgt/inputs/si.mmn...
+Reading /Users/grantheileman/Dev/Claude/rainbow-connection/workflows/si-qgt/inputs/si.mmn...
   16 bands, 512 k-points, 8 neighbors/k-point
   Occupied bands: 4
   Band gap: 0.6183 eV (DFT)

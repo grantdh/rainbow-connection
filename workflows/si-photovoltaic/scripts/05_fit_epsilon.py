@@ -17,7 +17,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 WORKFLOW_DIR = os.path.dirname(SCRIPT_DIR)
 INPUTS_DIR = os.path.join(WORKFLOW_DIR, "inputs")
 RESULTS_DIR = os.path.join(WORKFLOW_DIR, "results")
-CONVERTER_DIR = os.path.expanduser("~/Dev/silicon-forge/lib/converters")
+CONVERTER_DIR = os.path.expanduser("~/Dev/Claude/rainbow-connection/lib/converters")
 
 print("=" * 60)
 print("MUPPET: Si Photovoltaic Workflow")

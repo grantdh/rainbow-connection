@@ -163,7 +163,7 @@ Will need: heat equation solver, mesh import from MEEP grid, boundary conditions
 After installing solvers, create the unified environment:
 
 ```bash
-cd ~/Dev/silicon-forge  # or wherever you cloned rainbow-connection
+cd ~/Dev/Claude/rainbow-connection  # or wherever you cloned rainbow-connection
 source env.sh
 
 # Verify all solvers are found

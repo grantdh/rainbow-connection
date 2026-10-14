@@ -159,7 +159,7 @@ export OMPI_FC=/opt/homebrew/bin/gfortran-15
 
 **What:** Multi-Physics Unified Pipeline for Photonic Engineering and Technology. Orchestrates QE, Yambo, MEEP, and thermal solvers. Contains converters, workflow scripts, the QGT module, and documentation.
 
-**Repo:** `~/silicon-forge` → `~/Dev/silicon-forge`
+**Repo:** `~/Dev/Claude/rainbow-connection` → `~/Dev/Claude/rainbow-connection`
 **GitHub target:** `grantdh/rainbow-connection`
 **Status:** FUNCTIONAL (first end-to-end QE → Yambo → MEEP completed)
 
@@ -262,7 +262,7 @@ This is the highest-impact deliverable — reproducing your own experimental dat
 ```
 ~/apple-bottom/           → ~/Dev/arm/metal-algos        [apple-bottom repo]
 ~/acme-meep/              → ~/Dev/acme-meephistopheles    [MEEPhistopheles repo]
-~/silicon-forge/           → ~/Dev/silicon-forge           [MUPPET repo]
+~/Dev/Claude/rainbow-connection/           → ~/Dev/Claude/rainbow-connection           [MUPPET repo]
 ~/qe-test/q-e-qe-7.4.1/                                  [QE install + corretto work]
 ~/yambo-build/yambo/                                      [Yambo install + yamborghini work]
 ~/yambo-build/si2-gw/                                     [Yambo test data (Si GW+BSE)]

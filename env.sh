@@ -1,8 +1,8 @@
 #!/bin/bash
 # silicon-forge multiphysics environment
-# Usage: bash → source ~/silicon-forge/env.sh → work → exit
+# Usage: bash → source ~/Dev/Claude/rainbow-connection/env.sh → work → exit
 
-export SF_ROOT="$HOME/Dev/silicon-forge"
+export SF_ROOT="$HOME/Dev/Claude/rainbow-connection"
 
 # Solver locations (existing installs — DO NOT MODIFY)
 export SF_QE_ROOT="$HOME/qe-test/q-e-qe-7.4.1"
@@ -11,8 +11,8 @@ export SF_YAMBO_ROOT="$HOME/yambo-build/yambo"
 export SF_YAMBO_BIN="$SF_YAMBO_ROOT/bin"
 export SF_MEEP_ENV="meep_arm"                    # conda env name
 export SF_MEEP_SINGLE_ENV="meep-single"          # FP32 conda env
-export SF_APPLE_BOTTOM="$HOME/apple-bottom"      # DD-BLAS library
-export SF_ACME_MEEP="$HOME/acme-meep"            # Metal FDTD kernels
+export SF_APPLE_BOTTOM="$HOME/Dev/Claude/apple-bottom"      # DD-BLAS library
+export SF_ACME_MEEP="$HOME/Dev/Claude/MEEPhistopheles"      # Metal FDTD kernels
 
 # MPI compiler fix (from Yambo lesson)
 export OMPI_CC=/opt/homebrew/bin/gcc-15

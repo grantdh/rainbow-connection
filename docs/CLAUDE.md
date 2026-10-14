@@ -13,8 +13,8 @@ Grant Heileman, UNM ECE, graduating 2026. Principal engineer level. Prefers dire
 ## Repository Location
 
 ```
-~/Dev/silicon-forge/        (canonical path)
-~/silicon-forge              (symlink)
+~/Dev/Claude/rainbow-connection/        (canonical path)
+~/Dev/Claude/rainbow-connection              (symlink)
 ```
 
 GitHub target: `grantdh/rainbow-connection`
@@ -57,7 +57,7 @@ Read ARCHITECTURE.md for full technical design. Key points:
 4. **env.sh knows where everything is.** Source it before doing anything:
    ```bash
    bash              # subshell to contain env vars
-   source ~/silicon-forge/env.sh
+   source ~/Dev/Claude/rainbow-connection/env.sh
    ```
 
 ## File Conventions
@@ -110,7 +110,7 @@ The Yambo → MEEP converter fits ε(ω) to a sum of Lorentzian oscillators. Cur
 
 ```bash
 bash
-source ~/silicon-forge/env.sh
+source ~/Dev/Claude/rainbow-connection/env.sh
 
 # QE + Yambo steps require prior data in ~/yambo-build/si2-gw/
 # MEEP step uses pre-fitted material from lib/converters/

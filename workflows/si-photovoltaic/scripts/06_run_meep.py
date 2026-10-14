@@ -21,7 +21,7 @@ mat_file = os.path.join(os.path.dirname(__file__),
 # Fallback to direct path
 import os
 for path in [mat_file, 
-             os.path.expanduser("~/Dev/silicon-forge/lib/converters/yambo_material.json")]:
+             os.path.expanduser("~/Dev/Claude/rainbow-connection/lib/converters/yambo_material.json")]:
     if os.path.exists(path):
         mat_file = path
         break
@@ -170,7 +170,7 @@ results = {
     'material_source': mat_data['source_file'],
 }
 outfile = os.path.expanduser(
-    "~/Dev/silicon-forge/workflows/si-photovoltaic/results/thin_film_tra.json")
+    "~/Dev/Claude/rainbow-connection/workflows/si-photovoltaic/results/thin_film_tra.json")
 os.makedirs(os.path.dirname(outfile), exist_ok=True)
 with open(outfile, 'w') as f:
     json.dump(results, f, indent=2, default=lambda x: float(x) if hasattr(x, '__float__') else x)
