@@ -31,9 +31,9 @@ OUT.mkdir(parents=True, exist_ok=True)
 PROMPT = {
     "1": {"class_type": "MUPPET_Crystal", "inputs": {"material": "Si (diamond)", "lattice_bohr": 0.0}},
     "2": {"class_type": "MUPPET_QE_SCF", "inputs": {"structure": ["1", 0], "ecutwfc": 30.0, "kgrid": 4, "conv_thr": "1.0d-8",
-                                                   "executable": "qe-7.4.1 (vanilla)", "ab_mode": "off", "mpi_ranks": 1}},
+                                                   "executable": "qe (PATH, OpenBLAS, no apple-bottom)", "ab_mode": "off", "mpi_ranks": 1}},
     "3": {"class_type": "MUPPET_QE_NSCF", "inputs": {"scf": ["2", 0], "nbnd": 20, "kgrid": 4,
-                                                    "executable": "qe-7.4.1 (vanilla)", "ab_mode": "off", "mpi_ranks": 1}},
+                                                    "executable": "qe (PATH, OpenBLAS, no apple-bottom)", "ab_mode": "off", "mpi_ranks": 1}},
     "4": {"class_type": "MUPPET_P2Y", "inputs": {"nscf": ["3", 0]}},
     "5": {"class_type": "MUPPET_YamboOpticsIP", "inputs": {"save": ["4", 0], "bands": 20, "e_max_eV": 8.0, "steps": 400,
                                                           "broadening_eV": 0.1, "scissor_eV": 0.65}},

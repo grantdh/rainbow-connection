@@ -32,7 +32,8 @@ def _p(var: str, default: Path) -> Path:
     return Path(os.environ.get(var, str(default))).expanduser()
 
 
-QE_BIN = _p("SF_QE_BIN", HOME / "qe-test/q-e-qe-7.4.1/bin")
+QE_BIN = _p("SF_QE_BIN", HOME / "qe-test/q-e-qe-7.4.1/bin")      # relinked with static apple-bottom (not vanilla)
+QE_REF = _p("MUPPET_QE_REF", Path("/usr/local/bin/pw.x"))          # Nov 2025 MPI + OpenBLAS build, no apple-bottom symbols
 YAMBO_BIN = _p("SF_YAMBO_BIN", HOME / "yambo-build/yambo/bin")
 MEEP_PYTHON = _p("MUPPET_MEEP_PYTHON", HOME / "miniconda3_arm64/envs/meep_arm/bin/python")
 # apple-bottom-linked pw.x, frozen with its own dylib (never the live build/ of the library repo).
@@ -97,6 +98,12 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
         fh.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} rc={proc.returncode} wall={wall:.1f}s load1={load1():.2f} "
                  f"idle_at_start={was_idle} label={label or cmd[0]} cwd={cwd}\n")
     return proc.returncode, wall, log_file.read_text(errors="replace")
+
+
+def apple_bottom_symbols(binary: Path) -> int:
+    """How many apple-bottom entry points a pw.x exports (0 means an apple-bottom-free build)."""
+    out = subprocess.run(["nm", str(Path(binary).resolve())], capture_output=True, text=True).stdout
+    return sum(1 for line in out.splitlines() if "_ab_zgemm" in line or "_ab_init" in line or "_ab_dgemm" in line)
 
 
 # --------------------------------------------------------------------------- parsers
@@ -232,7 +239,7 @@ def provenance() -> dict:
         "rainbow_connection_commit": git,
         "hardware": subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], capture_output=True, text=True).stdout.strip(),
         "macos": subprocess.run(["sw_vers", "-productVersion"], capture_output=True, text=True).stdout.strip(),
-        "pw_x": str(QE_BIN / "pw.x"), "pw_x_sha256": sha(QE_BIN / "pw.x"),
+        "pw_x_reference": str(QE_REF), "pw_x_reference_sha256": sha(QE_REF), "pw_x_reference_ab_symbols": apple_bottom_symbols(QE_REF),
         "ab_frozen": str(AB_FROZEN), "ab_dylib_sha256": sha(AB_FROZEN / "libapplebottom.dylib"),
         "yambo": str(YAMBO_BIN / "yambo"), "meep_python": str(MEEP_PYTHON),
         "load1_at_start": load1(),

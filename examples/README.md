@@ -20,7 +20,9 @@ cd examples/<name>
 The meep_arm interpreter is used for every driver because it carries numpy, scipy, matplotlib and MEEP.
 Paths to pw.x, yambo, p2y, the frozen apple-bottom build and muppet-studio are resolved in
 `common/exlib.py` from the same variables as `../env.sh` (`SF_QE_BIN`, `SF_YAMBO_BIN`,
-`MUPPET_MEEP_PYTHON`, `MUPPET_AB_FROZEN`, `MUPPET_STUDIO`).
+`MUPPET_MEEP_PYTHON`, `MUPPET_AB_FROZEN`, `MUPPET_STUDIO`), plus `MUPPET_QE_REF` for the
+apple-bottom-free reference pw.x (`/usr/local/bin/pw.x`; the drivers verify it with `nm`, since the
+`~/qe-test/q-e-qe-7.4.1` binary is relinked with static apple-bottom).
 
 ## Machine etiquette
 

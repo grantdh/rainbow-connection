@@ -28,8 +28,8 @@ is running and records every run in `../common/solver-runs.log`.
 
 | stage | check |
 |---|---|
-| QE | SCF converges and reproduces the March reference energy to 1e-6 Ry (-22.83836927 Ry) |
-| apple-bottom | frozen pw.x gives the same energy in AB_MODE=cpu and AB_MODE=gpu (2.7 s vs 7.3 s wall), and the same as vanilla 7.4.1 |
+| QE | the reference pw.x (`/usr/local/bin/pw.x`, OpenBLAS) is verified apple-bottom-free with `nm`; SCF reproduces the March energy to 1e-6 Ry (-22.83836927 Ry) |
+| apple-bottom | frozen pw.x gives the same energy in AB_MODE=cpu and AB_MODE=gpu, and the same as the apple-bottom-free reference |
 | Yambo | the scissor moves the reported direct gap by exactly 0.65 eV; the eps2 onset sits at the scissored gap |
 | converter | eps_inf + sum(sigma) = eps1(0) exactly; fit rms within 15 % of max\|eps\| |
 | optics | Airy T+R+A conservation; MEEP converges to Airy (rms dT 0.018 -> 0.004 from 200 to 800 px/um) |
@@ -44,7 +44,12 @@ is running and records every run in `../common/solver-runs.log`.
   makes the second run instant (0.3 s).
 - The apple-bottom leg is a correctness gate, not a speed test. On a 2-atom cell every GEMM is tiny
   (avg 303 x 4 x 206 complex), so the forced-GPU run is slower (4.5 s of BLAS against 27 ms on the CPU
-  path) while the energies agree to all printed digits. That is the expected regime behaviour.
+  path) while the energies agree to all printed digits. That is the expected regime behaviour; the times
+  are observations on a shared machine, not a benchmark, and the frozen build's apple-bottom commit is
+  not pinned (its PROVENANCE.txt says so).
+- Note that `~/qe-test/q-e-qe-7.4.1/bin/pw.x`, which env.sh calls the production QE, is relinked with
+  static apple-bottom (7 `_ab_*` exports); it is not vanilla. The example therefore uses
+  `/usr/local/bin/pw.x` as the apple-bottom-free reference (override with `MUPPET_QE_REF`).
 - MEEP's residual error against the analytic slab result halves per resolution doubling (first-order
   interface error of the dispersive medium), which is how you know the FDTD leg is converged rather
   than merely "close".

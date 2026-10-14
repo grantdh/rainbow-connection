@@ -33,7 +33,7 @@ SCISSOR_EV = 0.65        # rigid shift of the PBE conduction bands (GW for Si gi
 NBND = 20
 THICK_NM = 500.0
 E_RANGE = (1.0, 4.0)
-REF_ENERGY_RY = -22.83836927   # workflows/si-photovoltaic/inputs/si_scf.out, same input, QE 7.4.1, 2026-03-29
+REF_ENERGY_RY = -22.83836927   # workflows/si-photovoltaic/inputs/si_scf.out, same input, 2026-03-29 (binary of that run unknown)
 
 SI_SCF = """&CONTROL
   calculation = '{calc}'
@@ -110,19 +110,21 @@ def main() -> int:
     t_start = time.time()
 
     # ------------------------------------------------------------------ 1. QE SCF + NSCF (vanilla 7.4.1)
-    stage("1. Quantum ESPRESSO SCF + NSCF (vanilla pw.x)")
+    stage("1. Quantum ESPRESSO SCF + NSCF (reference pw.x: OpenBLAS, no apple-bottom)")
+    n_ab = exlib.apple_bottom_symbols(exlib.QE_REF)
+    checks.add("reference pw.x is apple-bottom-free (nm)", n_ab == 0, f"{n_ab} ab symbols in {exlib.QE_REF}", "no _ab_* exports")
     qe = RES / "qe"
     (qe / "pseudo").mkdir()
     os.symlink(exlib.PSEUDO_SI, qe / "pseudo" / exlib.PSEUDO_SI.name)
     (qe / "scf.in").write_text(qe_input("scf"))
     (qe / "nscf.in").write_text(qe_input("nscf"))
-    rc, wall, text = exlib.run([exlib.QE_BIN / "pw.x", "-in", "scf.in"], qe, qe / "scf.out", label="si scf vanilla")
+    rc, wall, text = exlib.run([exlib.QE_REF, "-in", "scf.in"], qe, qe / "scf.out", label="si scf reference")
     scf = exlib.parse_pw(text)
     print(f"  SCF rc={rc} wall={wall:.1f}s E_tot={scf.get('total_energy_Ry')} Ry gap={scf.get('gap_eV')} eV")
     checks.add("QE SCF converged", scf.get("job_done") and "total_energy_Ry" in scf, scf.get("scf_iterations"), "JOB DONE + total energy")
     de = abs(scf.get("total_energy_Ry", 0) - REF_ENERGY_RY)
     checks.add("SCF energy reproduces March reference", de < 1e-6, f"{de:.1e} Ry", "|dE| < 1e-6 Ry vs -22.83836927")
-    rc, wall, text = exlib.run([exlib.QE_BIN / "pw.x", "-in", "nscf.in"], qe, qe / "nscf.out", label="si nscf vanilla")
+    rc, wall, text = exlib.run([exlib.QE_REF, "-in", "nscf.in"], qe, qe / "nscf.out", label="si nscf reference")
     nscf = exlib.parse_pw(text)
     print(f"  NSCF rc={rc} wall={wall:.1f}s gap={nscf.get('gap_eV')} eV (PBE, Gamma-centred 4x4x4 mesh)")
     checks.add("QE NSCF produced 20 bands", nscf.get("job_done"), nscf.get("gap_eV"), "JOB DONE")
@@ -158,8 +160,8 @@ def main() -> int:
         checks.add("apple-bottom cpu/gpu energies identical", both and abs(e_cpu - e_gpu) < 1e-8,
                    f"cpu={e_cpu} gpu={e_gpu}", "|dE| < 1e-8 Ry on the same frozen binary")
         if both:
-            checks.add("apple-bottom build agrees with vanilla 7.4.1", abs(e_cpu - scf["total_energy_Ry"]) < 1e-5,
-                       f"{abs(e_cpu - scf['total_energy_Ry']):.1e} Ry", "|dE| < 1e-5 Ry (QE develop vs 7.4.1)")
+            checks.add("apple-bottom build agrees with the apple-bottom-free reference", abs(e_cpu - scf["total_energy_Ry"]) < 1e-5,
+                       f"{abs(e_cpu - scf['total_energy_Ry']):.1e} Ry", "|dE| < 1e-5 Ry (QE develop + apple-bottom vs 7.4.1 OpenBLAS)")
             print(f"  wall: cpu {ab_res['cpu']['wall_s']:.1f}s, gpu {ab_res['gpu']['wall_s']:.1f}s "
                   f"(2-atom cell: every GEMM is far below the DD crossover; a slower GPU leg is expected)")
     else:
@@ -305,7 +307,8 @@ def results_md(s: dict, checks: exlib.Checks) -> str:
     p = s["provenance"]
     lines = [f"# Example 1 results: Si thin film ({p['date']})", "",
              f"rainbow-connection {p['rainbow_connection_commit']}, {p['hardware']}, macOS {p['macos']}, "
-             f"QE {s['qe']['scf'].get('qe_version')}, MEEP {s.get('meep', {}).get('resolution', '-')} px/um, load1 {p['load1_at_start']:.2f}", "",
+             f"reference pw.x {p['pw_x_reference']} (QE {s['qe']['scf'].get('qe_version')}, {p['pw_x_reference_ab_symbols']} apple-bottom symbols), "
+             f"MEEP {s.get('meep', {}).get('resolution', '-')} px/um, load1 {p['load1_at_start']:.2f}", "",
              "## Checks", "", checks.markdown(), "",
              "## Numbers", "",
              f"- QE SCF total energy: {s['qe']['scf'].get('total_energy_Ry')} Ry in {s['qe']['scf'].get('scf_iterations')} iterations (reference {REF_ENERGY_RY})",
@@ -327,7 +330,9 @@ def results_md(s: dict, checks: exlib.Checks) -> str:
             r = ab[m]
             lines.append(f"| {m} | {r['rc']} | {r.get('total_energy_Ry')} | {r.get('scf_iterations')} | {r['wall_s']:.1f} |")
         lines += ["", "The 2-atom cell keeps every GEMM far below the DD crossover, so this leg tests correctness "
-                  "(identical energies, honest dispatch report), not speed. Profile JSON: results/ab/*/ab_profile.json."]
+                  "(identical energies, honest dispatch report), not speed. The wall times are observations of this run on a "
+                  "shared machine, not a benchmark, and the frozen build's exact apple-bottom commit is not pinned "
+                  "(see its PROVENANCE.txt). Profile JSON: results/ab/*/ab_profile.json."]
     lines += ["", "## Files", "", "- results/qe/{scf,nscf}.out, results/yambo/o-ip.eps_q1_ip, results/material.json, "
               "results/meep/spectrum.json, results/summary.json, results/si_thin_film.png"]
     return "\n".join(lines) + "\n"
