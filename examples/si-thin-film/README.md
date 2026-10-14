@@ -29,7 +29,7 @@ is running and records every run in `../common/solver-runs.log`.
 | stage | check |
 |---|---|
 | QE | the reference pw.x (`/usr/local/bin/pw.x`, OpenBLAS) is verified apple-bottom-free with `nm`; SCF reproduces the March energy to 1e-6 Ry (-22.83836927 Ry) |
-| apple-bottom | frozen pw.x gives the same energy in AB_MODE=cpu and AB_MODE=gpu, and the same as the apple-bottom-free reference |
+| apple-bottom | frozen pw.x gives the same energy in AB_MODE=cpu and AB_MODE=gpu, and the same as the apple-bottom-free reference; the library's profiler reports 0/4275 ZGEMM GPU dispatches in cpu mode and 4275/4275 with no fallback in gpu mode |
 | Yambo | the scissor moves the reported direct gap by exactly 0.65 eV; the eps2 onset sits at the scissored gap |
 | converter | eps_inf + sum(sigma) = eps1(0) exactly; fit rms within 15 % of max\|eps\| |
 | optics | Airy T+R+A conservation; MEEP converges to Airy (rms dT 0.018 -> 0.004 from 200 to 800 px/um) |
