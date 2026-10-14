@@ -1,0 +1,6 @@
+# Generated data from example runs (solver outputs, plots, JSON) is never committed.
+*/results/
+*/runs/
+*/tmp/
+__pycache__/
+*.pyc
