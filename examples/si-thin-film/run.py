@@ -162,8 +162,18 @@ def main() -> int:
         if both:
             checks.add("apple-bottom build agrees with the apple-bottom-free reference", abs(e_cpu - scf["total_energy_Ry"]) < 1e-5,
                        f"{abs(e_cpu - scf['total_energy_Ry']):.1e} Ry", "|dE| < 1e-5 Ry (QE develop + apple-bottom vs 7.4.1 OpenBLAS)")
-            print(f"  wall: cpu {ab_res['cpu']['wall_s']:.1f}s, gpu {ab_res['gpu']['wall_s']:.1f}s "
-                  f"(2-atom cell: every GEMM is far below the DD crossover; a slower GPU leg is expected)")
+        # The profiler's own dispatch counters (a report by the frozen library, not an external GPU counter).
+        def dispatch(mode):
+            rows = {r["name"]: r for r in (ab_res[mode].get("profile") or {}).get("routines", [])}
+            z = rows.get("zgemm", {})
+            return z.get("calls"), z.get("gpu_dispatch_count"), z.get("amx_fallback_count")
+        (nc, gc, fc), (ng, gg, fg) = dispatch("cpu"), dispatch("gpu")
+        checks.add("profiler: cpu mode dispatched no ZGEMM to the GPU", nc is not None and gc == 0, f"{gc}/{nc} GPU dispatches",
+                   "gpu_dispatch_count == 0 (AB_PROFILE_JSON of the frozen library)")
+        checks.add("profiler: gpu mode dispatched every ZGEMM to the GPU with no fallback", ng is not None and gg == ng and fg == 0,
+                   f"{gg}/{ng} GPU dispatches, {fg} fallbacks", "gpu_dispatch_count == calls and amx_fallback_count == 0 (profiler report, not gated against an external GPU counter)")
+        print(f"  wall: cpu {ab_res['cpu']['wall_s']:.1f}s, gpu {ab_res['gpu']['wall_s']:.1f}s "
+              f"(2-atom cell: every GEMM is far below the DD crossover; a slower GPU leg is expected)")
     else:
         stage("1b. apple-bottom parity leg skipped")
 
