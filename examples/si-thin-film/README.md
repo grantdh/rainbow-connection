@@ -47,6 +47,11 @@ is running and records every run in `../common/solver-runs.log`.
   path) while the energies agree to all printed digits. That is the expected regime behaviour; the times
   are observations on a shared machine, not a benchmark, and the frozen build's apple-bottom commit is
   not pinned (its PROVENANCE.txt says so).
+- Caveat on the Yambo stage: `Si.pbe-n-rrkjus_psl.1.0.0.UPF` is an ultrasoft pseudopotential. Yambo's p2y
+  carries a "[PPs] Ultrasoft PP not supported" message and the build's configure report is not on disk,
+  so whether this Yambo handles USPP augmentation correctly is unconfirmed (the ecosystem plan flags it).
+  The pipeline mechanics are exercised either way; for physics-grade eps(w) switch the preset to a
+  norm-conserving Si pseudo (e.g. QE's `Si.pz-vbc.UPF`, on disk) and re-pin the reference energy.
 - Note that `~/qe-test/q-e-qe-7.4.1/bin/pw.x`, which env.sh calls the production QE, is relinked with
   static apple-bottom (7 `_ab_*` exports); it is not vanilla. The example therefore uses
   `/usr/local/bin/pw.x` as the apple-bottom-free reference (override with `MUPPET_QE_REF`).
