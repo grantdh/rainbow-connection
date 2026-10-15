@@ -49,9 +49,13 @@ SOLVERS = {"pw.x", "ph.x", "epw.x", "yambo", "p2y", "ypp", "mpirun", "prterun", 
 
 CAMPAIGN_MARKERS = ("run_campaign.sh", "campaign.sh", "machlock.py", "pilot.sh", "qe_bench.sh")
 TIMING_LOCK = Path.home() / "Dev" / ".timing-lock"
+# The shared machine lock (~/qe-test/xp/tools/machlock.py): "bench" is exclusive and also waits for foreign
+# pw.x/yambo jobs and for load1 to drop. When it exists every example launch goes through it, so our short
+# runs interleave with other sessions' timing campaigns instead of overlapping them.
+MACHLOCK = _p("MUPPET_MACHLOCK", HOME / "qe-test/xp/tools/machlock.py")
 
 
-def external_solver_pids(exclude_substring: str = "examples/") -> list[tuple[int, str]]:
+def external_solver_pids(exclude_substring: str = "examples/", campaigns: bool = True) -> list[tuple[int, str]]:
     """Solver or timing-campaign processes started by someone else (never disturb a timing window)."""
     out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
     found = []
@@ -63,14 +67,18 @@ def external_solver_pids(exclude_substring: str = "examples/") -> list[tuple[int
         if exclude_substring in cmd or not cmd.split():
             continue
         exe = os.path.basename(cmd.split()[0])
-        if exe in SOLVERS or any(m in cmd for m in CAMPAIGN_MARKERS):
+        if exe in SOLVERS or (campaigns and any(m in cmd for m in CAMPAIGN_MARKERS)):
             found.append((int(pid), cmd[:120]))
     if TIMING_LOCK.exists():
         found.append((0, f"timing lock present: {TIMING_LOCK}"))
     return found
 
 
-def wait_for_idle(max_wait_s: int | None = None, poll_s: int = 30, log=print) -> bool:
+def _flush_print(*a, **k):
+    print(*a, **k, flush=True)
+
+
+def wait_for_idle(max_wait_s: int | None = None, poll_s: int = 30, log=_flush_print) -> bool:
     """Block while another session's solver or timing campaign is running.
 
     Waits indefinitely by default (MUPPET_GUARD_MAX_WAIT_S overrides; MUPPET_GUARD_OVERRIDE=1 skips
@@ -97,6 +105,20 @@ def wait_for_idle(max_wait_s: int | None = None, poll_s: int = 30, log=print) ->
         time.sleep(poll_s)
 
 
+def wait_for_timing_lock(poll_s: int = 60, log=_flush_print) -> None:
+    """~/Dev/.timing-lock is another session's 'machine is mine' flag: wait until it is removed."""
+    if os.environ.get("MUPPET_GUARD_OVERRIDE") == "1":
+        return
+    announced = False
+    while TIMING_LOCK.exists():
+        if not announced:
+            log(f"  [guard] {TIMING_LOCK} present ({TIMING_LOCK.read_text(errors='ignore').strip()[:80]}) -> waiting")
+            announced = True
+        time.sleep(poll_s)
+    if announced:
+        log("  [guard] timing lock released")
+
+
 def load1() -> float:
     return os.getloadavg()[0]
 
@@ -108,7 +130,13 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
     full_env = dict(os.environ)
     full_env.update(env or {})
     argv = ["nice", "-n", str(nice)] + [str(c) for c in cmd]
-    was_idle = wait_for_idle()
+    locked = MACHLOCK.exists() and os.environ.get("MUPPET_NO_MACHLOCK") != "1"
+    wait_for_timing_lock()
+    if locked:
+        argv = ["/opt/homebrew/bin/python3", str(MACHLOCK), "bench", "--"] + argv
+        was_idle = not external_solver_pids(campaigns=False)   # the lock serialises with campaigns; only record the state
+    else:
+        was_idle = wait_for_idle()
     t0 = time.time()
     with open(log_file, "w") as fh, (open(stdin_file) if stdin_file else open(os.devnull)) as fin:
         proc = subprocess.run(argv, cwd=cwd, env=full_env, stdout=fh, stderr=subprocess.STDOUT,
@@ -117,7 +145,7 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
     RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(RUN_LOG, "a") as fh:
         fh.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} rc={proc.returncode} wall={wall:.1f}s load1={load1():.2f} "
-                 f"idle_at_start={was_idle} label={label or cmd[0]} cwd={cwd}\n")
+                 f"idle_at_start={was_idle} lock={'machlock' if locked else 'guard'} label={label or cmd[0]} cwd={cwd}\n")
     return proc.returncode, wall, log_file.read_text(errors="replace")
 
 
@@ -125,6 +153,13 @@ def apple_bottom_symbols(binary: Path) -> int:
     """How many apple-bottom entry points a pw.x exports (0 means an apple-bottom-free build)."""
     out = subprocess.run(["nm", str(Path(binary).resolve())], capture_output=True, text=True).stdout
     return sum(1 for line in out.splitlines() if "_ab_zgemm" in line or "_ab_init" in line or "_ab_dgemm" in line)
+
+
+def check_upf(path: Path) -> None:
+    """Refuse pseudopotential files that are not UPF (a saved HTML error page has bitten this repo before)."""
+    head = Path(path).read_bytes()[:4000].decode("utf-8", errors="ignore")
+    if "<PP_HEADER" not in head and "<UPF" not in head:
+        raise ValueError(f"{path} is not a UPF pseudopotential (header: {head[:60]!r})")
 
 
 # --------------------------------------------------------------------------- parsers
