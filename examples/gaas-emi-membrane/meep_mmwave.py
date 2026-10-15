@@ -41,14 +41,15 @@ def simulate(geometry, refl_data=None):
     tran = sim.add_flux(fcen, df, nfreq, mp.FluxRegion(center=mp.Vector3(0, 0, tran_z)))
     if refl_data is not None:
         sim.load_minus_flux_data(refl, refl_data)
-    sim.run(until_after_sources=mp.stop_when_fields_decayed(10, mp.Ex, mp.Vector3(0, 0, tran_z), 1e-8))
+    sim.run(until_after_sources=mp.stop_when_fields_decayed(cfg.get("decay_dt", 10), mp.Ex, mp.Vector3(0, 0, tran_z), cfg.get("decay", 1e-8)))
     return sim, refl, tran
 
 
 sim0, refl0, tran0 = simulate([])
 incident = np.array(mp.get_fluxes(tran0))
 freqs = np.array(mp.get_flux_freqs(tran0))
-slab = [mp.Block(size=mp.Vector3(mp.inf, mp.inf, d), center=mp.Vector3(), material=medium)]
+z0 = cfg.get("center_offset_px", 0.0) / cfg["resolution_per_mm"]   # half a pixel puts the slab edges on H sites
+slab = [mp.Block(size=mp.Vector3(mp.inf, mp.inf, d), center=mp.Vector3(0, 0, z0), material=medium)]
 sim1, refl1, tran1 = simulate(slab, sim0.get_flux_data(refl0))
 R = -np.array(mp.get_fluxes(refl1)) / incident
 T = np.array(mp.get_fluxes(tran1)) / incident

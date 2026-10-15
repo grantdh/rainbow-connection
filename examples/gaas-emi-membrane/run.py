@@ -7,7 +7,7 @@ and the "More Than Skin Deep" analysis with the ecosystem's own tools:
   QE PAW GaAs SCF+NSCF (8x8x8, 20 bands; on disk from workflows/gaas-emi-shield, March 2026)
     -> p2y SAVE (on disk)  -> yambo IP-RPA + scissor to the 1.42 eV gap      [run here]
     -> Lorentz fit with the static sum rule (lib/converters)                  [run here]
-    -> + Drude free carriers (n = 1e19 cm^-3, m* = 0.063 m_e; gamma from the measured
+    -> + Drude free carriers (n = 1e19 cm^-3, m* = 0.063 m_e, experimental; gamma from the measured
        van der Pauw conductivity of each membrane)                            [run here]
     -> transfer matrix: mm-wave SE 65-85 GHz, IR transmittance 750-2500 nm,
        GaAs/Kapton/GaAs multilayer                                            [run here]
@@ -40,7 +40,9 @@ PBE_DIRECT_GAP = 0.513485          # r-gaas_scissors_optics_chi, Direct Gap at k
 EXP_GAP = 1.42
 SCISSOR = EXP_GAP - PBE_DIRECT_GAP
 N_DOPING = 1e19 * 1e6              # m^-3 (nominal Si doping)
-M_STAR = 0.063 * el.m_e            # PBE band curvature at Gamma
+M_STAR = 0.063 * el.m_e            # experiment, room temperature (Blakemore, JAP 53, R123 (1982)); low-T 0.067 (Vurgaftman 2001).
+                                   # PBE curvature at Gamma is 0.0316 m_e (gap 0.51 eV; measured in examples/antenna-heating) and
+                                   # cannot be scissor-corrected into the measured value (two-band Kane rescaling gives 0.089).
 # Measured DC conductivity, Renteria Table 1 (van der Pauw) and the measured SE at 75 GHz (Fig. 4b).
 SIGMA_DC = {200: 1.19e5, 500: 8.81e4, 1000: 8.01e4}
 EXP_SE_75 = {200: 13.5, 500: 19.0, 1000: 24.0}
@@ -287,7 +289,7 @@ def results_md(S, checks) -> str:
     if "meep" in S:
         L.append(f"- MEEP 1D vs TMM (same model) max|dSE| = {S['meep']['max_dSE_vs_tmm']:.3f} dB; vs full model {S['meep']['max_dSE_vs_full_model']:.3f} dB; wall {S['meep']['wall_s']:.0f} s")
     L += ["", "## What is first-principles here and what is measured", "",
-          "- First principles: the band structure (QE PBE), the interband eps(w) (Yambo), m* = 0.063 m_e (PBE curvature), the scissor target (1.42 eV).",
+          "- First principles: the band structure (QE PBE), the interband eps(w) (Yambo). Taken from experiment: m* = 0.063 m_e (Blakemore 1982, room temperature; PBE curvature gives 0.0316 m_e), the scissor target (1.42 eV), n and sigma_dc.",
           "- Measured input: the carrier density (nominal doping) and the DC conductivity of each membrane (van der Pauw), which sets gamma.",
           "- The mm-wave SE is set by Z0*sigma*d (skin depth >> thickness), so it tests the Drude/TMM chain, not the band structure.",
           "- The IR transmittance is where the ab initio eps(w) matters (index and fringe spacing). IP+scissor overestimates eps1(0) (n 4.8 vs 3.4), so fringes are too dense, and its Lorentzian-broadened E0 edge leaks absorption below the gap, so the fitted interband model is opaque where the real membrane is transparent. The sub-gap curves therefore use the fit's static eps plus Drude. BSE on a denser k-grid is the known fix.",

@@ -9,7 +9,7 @@ QE PAW GaAs SCF+NSCF (8x8x8, 20 bands)           on disk: workflows/gaas-emi-shi
   -> p2y SAVE                                      on disk
   -> yambo IP-RPA + 0.907 eV scissor (0.513 -> 1.42 eV)            run here (2 s)
   -> Lorentz fit with the static sum rule (lib/converters)          run here
-  -> + Drude free carriers: n = 1e19 cm^-3, m* = 0.063 m_e (PBE),
+  -> + Drude free carriers: n = 1e19 cm^-3, m* = 0.063 m_e (experiment, Blakemore 1982),
      gamma from each membrane's measured van der Pauw conductivity  run here
   -> transfer matrix: SE 65-85 GHz (200/500/1000 nm), IR fringes,
      1 um GaAs / 125 um Kapton / 1 um GaAs                          run here
@@ -47,8 +47,11 @@ QE PAW GaAs SCF+NSCF (8x8x8, 20 bands)           on disk: workflows/gaas-emi-shi
 
 ## What is first principles and what is measured
 
-The band structure, the interband eps(w), the effective mass and the gap target come from the
-calculations. The carrier density (nominal doping) and the DC conductivity of each membrane are
+The band structure and the interband eps(w) come from the calculations. The effective mass
+(0.063 m_e, Blakemore 1982, room temperature) and the gap target (1.42 eV) are experimental: PBE's own
+Gamma curvature is 0.0316 m_e at its 0.51 eV gap (measured in examples/antenna-heating) and a two-band
+Kane rescaling to the measured gap overshoots (0.089 m_e), so the PBE mass cannot be scissor-corrected
+into the measured one. The carrier density (nominal doping) and the DC conductivity of each membrane are
 measurements, and they set the scattering rate. At 75 GHz the skin depth (5-6 um) is far larger than
 the membrane, so SE is set by Z0 sigma d: the mm-wave test exercises the Drude + transfer-matrix + FDTD
 chain, not the band structure. The IR window is where the ab initio eps(w) matters, and where its
