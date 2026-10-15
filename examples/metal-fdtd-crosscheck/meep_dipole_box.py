@@ -3,7 +3,7 @@
 --empty removes the conductor: a point-ish soft source in a 1.6 x 1.6 x 3.2 m PEC cavity, whose TM_mnp
 resonances are analytic (m, n odd and p even are excited from the centre).
 
-Run with the meep_arm interpreter:  python meep_dipole_box.py out_dir [--as-shipped]
+Run with the meep_arm interpreter:  python meep_dipole_box.py out_dir [--as-shipped] [--empty] [--steps N]
 Writes out_dir/timedomain.txt (time, voltage-proxy, current-proxy) and metadata.txt in the same
 format as LoopFDTD/dipole_s11.swift, so analyze.py treats all engines alike.
 
@@ -31,7 +31,7 @@ c0 = 299792458.0
 f0 = 300e6 / c0                       # 1.0 in MEEP units
 dx = 0.025
 Nx, Ny, Nz = 64, 64, 128
-nsteps = 2000
+nsteps = int(sys.argv[sys.argv.index("--steps") + 1]) if "--steps" in sys.argv else 2000
 courant = 0.99 / np.sqrt(3.0)
 dt = courant * dx
 half = 10                             # dipoleLengthCells/2 with dipoleLengthCells = Int(0.5/0.025) = 20
@@ -47,7 +47,8 @@ for di, dj in ([] if empty else cross):
         zc = sign * ((dz_lo + half) / 2) * dx + off
         geometry.append(mp.Block(size=mp.Vector3(dx, dx, arm_len), center=mp.Vector3(di * dx + off, dj * dx + off, zc),
                                  material=mp.metal))
-t0_src, spread = 10.0 / f0, 3.0 / f0
+spread_periods = float(sys.argv[sys.argv.index("--spread") + 1]) if "--spread" in sys.argv else 3.0   # envelope spread in periods (Swift: 3)
+t0_src, spread = 10.0 / f0, spread_periods / f0
 
 
 def src_func(t):
@@ -66,13 +67,16 @@ patch = mp.Volume(center=patch_center, size=patch_size)
 times, volts, amps = [], [], []
 tic = time.time()
 for step in range(nsteps):
-    sim.run(until=dt)
+    # One Yee step per sample. sim.run(until=dt) is NOT suitable: it compares a float32-rounded clock and
+    # advances one or two steps per call, which makes the time axis non-uniform and every FFT peak wrong.
+    sim.fields.step()
+    assert sim.fields.t == step + 1, f"MEEP advanced {sim.fields.t} steps after {step + 1} samples"
     ez = sim.get_array(component=mp.Ez, vol=patch)
     hx = sim.get_array(component=mp.Hx, vol=patch)
     hy = sim.get_array(component=mp.Hy, vol=patch)
     v = float(np.mean(ez))
     cur = float(np.mean((hx[1:, 1:] - hx[1:, :-1]) - (hy[1:, 1:] - hy[:-1, 1:]))) * dx
-    times.append(sim.meep_time() / c0)
+    times.append(sim.fields.time() / c0)        # double precision: fields.t * dt
     volts.append(v)
     amps.append(cur)
     if step % 400 == 0:
@@ -86,7 +90,7 @@ with open(out / "timedomain.txt", "w") as fh:
         fh.write(f"{t} {v} {i}\n")
 (out / "metadata.txt").write_text(
     f"engine: MEEP {mp.__version__} (CPU, FP64={not mp.is_single_precision()}){' as-shipped geometry' if as_shipped else ''}{' empty box' if empty else ''}\n"
-    f"grid: {Nx} x {Ny} x {Nz}\ncell_size_m: {dx}\ndt_s: {dt / c0}\nsteps: {nsteps}\npec_blocks: {len(geometry)}\n"
+    f"grid: {Nx} x {Ny} x {Nz}\ncell_size_m: {dx}\ndt_s: {dt / c0}\nsteps: {nsteps}\nspread_periods: {spread_periods}\npec_blocks: {len(geometry)}\n"
     f"gap_cells: {0 if as_shipped else 1}\nelapsed_s: {elapsed:.3f}\nthroughput_Mcells_per_s: {mcells:.1f}\n"
     f"boundaries: PEC box (no PML), like the Swift programs\n")
 print(f"MEEP dipole box done: {elapsed:.2f} s, {mcells:.0f} Mcells/s")
