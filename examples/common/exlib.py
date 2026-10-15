@@ -47,8 +47,12 @@ SOLVERS = {"pw.x", "ph.x", "epw.x", "yambo", "p2y", "ypp", "mpirun", "prterun", 
 
 # --------------------------------------------------------------------------- machine etiquette
 
+CAMPAIGN_MARKERS = ("run_campaign.sh", "campaign.sh", "machlock.py", "pilot.sh", "qe_bench.sh")
+TIMING_LOCK = Path.home() / "Dev" / ".timing-lock"
+
+
 def external_solver_pids(exclude_substring: str = "examples/") -> list[tuple[int, str]]:
-    """Solver processes started by someone else (the si64 timing campaign, for instance)."""
+    """Solver or timing-campaign processes started by someone else (never disturb a timing window)."""
     out = subprocess.run(["ps", "-axo", "pid=,command="], capture_output=True, text=True).stdout
     found = []
     for line in out.splitlines():
@@ -56,23 +60,40 @@ def external_solver_pids(exclude_substring: str = "examples/") -> list[tuple[int
         if not line:
             continue
         pid, _, cmd = line.partition(" ")
-        exe = os.path.basename(cmd.split()[0]) if cmd.split() else ""
-        if exe in SOLVERS and exclude_substring not in cmd:
+        if exclude_substring in cmd or not cmd.split():
+            continue
+        exe = os.path.basename(cmd.split()[0])
+        if exe in SOLVERS or any(m in cmd for m in CAMPAIGN_MARKERS):
             found.append((int(pid), cmd[:120]))
+    if TIMING_LOCK.exists():
+        found.append((0, f"timing lock present: {TIMING_LOCK}"))
     return found
 
 
-def wait_for_idle(max_wait_s: int = 1800, poll_s: int = 20, log=print) -> bool:
-    """Block while another session's solver is running. Returns True if it is safe to start."""
+def wait_for_idle(max_wait_s: int | None = None, poll_s: int = 30, log=print) -> bool:
+    """Block while another session's solver or timing campaign is running.
+
+    Waits indefinitely by default (MUPPET_GUARD_MAX_WAIT_S overrides; MUPPET_GUARD_OVERRIDE=1 skips
+    the guard, which is only acceptable when the owner has said the machine is free).
+    """
+    if os.environ.get("MUPPET_GUARD_OVERRIDE") == "1":
+        return True
+    if max_wait_s is None:
+        max_wait_s = int(os.environ.get("MUPPET_GUARD_MAX_WAIT_S", "0")) or None
     t0 = time.time()
+    announced = False
     while True:
         busy = external_solver_pids()
         if not busy:
+            if announced:
+                log(f"  [guard] machine free after {time.time() - t0:.0f}s")
             return True
-        if time.time() - t0 > max_wait_s:
-            log(f"  [guard] still busy after {max_wait_s}s: {busy[:2]} -> proceeding anyway (noted in log)")
+        if max_wait_s is not None and time.time() - t0 > max_wait_s:
+            log(f"  [guard] still busy after {max_wait_s}s: {busy[:2]} -> proceeding (MUPPET_GUARD_MAX_WAIT_S set)")
             return False
-        log(f"  [guard] external solver running ({busy[0][1][:60]}...), waiting {poll_s}s")
+        if not announced:
+            log(f"  [guard] external solver/campaign running: {busy[0][1][:90]} -> waiting (poll {poll_s}s)")
+            announced = True
         time.sleep(poll_s)
 
 
