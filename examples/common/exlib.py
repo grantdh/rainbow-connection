@@ -15,7 +15,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -106,9 +105,10 @@ def wait_for_idle(max_wait_s: int | None = None, poll_s: int = 30, log=_flush_pr
 
 
 def wait_for_timing_lock(poll_s: int = 60, log=_flush_print) -> None:
-    """~/Dev/.timing-lock is another session's 'machine is mine' flag: wait until it is removed."""
-    if os.environ.get("MUPPET_GUARD_OVERRIDE") == "1":
-        return
+    """~/Dev/.timing-lock is another session's 'machine is mine' flag: wait until it is removed.
+
+    Never bypassed: MUPPET_GUARD_OVERRIDE and MUPPET_NO_MACHLOCK only relax the foreign-solver guard and the
+    machlock serialisation for untimed work; a timing campaign's lock always holds."""
     announced = False
     while TIMING_LOCK.exists():
         if not announced:
@@ -130,11 +130,16 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
     full_env = dict(os.environ)
     full_env.update(env or {})
     argv = ["nice", "-n", str(nice)] + [str(c) for c in cmd]
-    locked = MACHLOCK.exists() and os.environ.get("MUPPET_NO_MACHLOCK") != "1"
+    # MUPPET_SHARE=1: untimed correctness runs share the machine (PROTOCOL section 9): no machlock serialisation and no
+    # wait for other sessions' solvers. The timing lock (~/Dev/.timing-lock) is honoured in every mode.
+    share = os.environ.get("MUPPET_SHARE") == "1"
+    locked = MACHLOCK.exists() and not share and os.environ.get("MUPPET_NO_MACHLOCK") != "1"
     wait_for_timing_lock()
     if locked:
         argv = ["/opt/homebrew/bin/python3", str(MACHLOCK), "bench", "--"] + argv
         was_idle = not external_solver_pids(campaigns=False)   # the lock serialises with campaigns; only record the state
+    elif share:
+        was_idle = not external_solver_pids(campaigns=False)   # recorded, not waited for
     else:
         was_idle = wait_for_idle()
     t0 = time.time()
@@ -145,7 +150,7 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
     RUN_LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(RUN_LOG, "a") as fh:
         fh.write(f"{time.strftime('%Y-%m-%dT%H:%M:%S')} rc={proc.returncode} wall={wall:.1f}s load1={load1():.2f} "
-                 f"idle_at_start={was_idle} lock={'machlock' if locked else 'guard'} label={label or cmd[0]} cwd={cwd}\n")
+                 f"idle_at_start={was_idle} lock={'machlock' if locked else ('share' if share else 'guard')} label={label or cmd[0]} cwd={cwd}\n")
     return proc.returncode, wall, log_file.read_text(errors="replace")
 
 
