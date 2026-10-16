@@ -93,27 +93,36 @@ resonance and shown the two absorbed-power measurements within 1.1 %, so the fir
   the energy balance holds to 0.2-1 % at every resolution. This is why the heat map and temperature come
   from the receiving stage E. There is no feed there, and the heat follows the induced current.
 
-- **The receiving rod is not converged at 15 px/um (E), and both convergence checks stay red.** Its
-  absorption peak moves from 10.53 THz (20.8 um^2) at 10 px/um to 11.94 THz (28.4 um^2) at 15. A scratch
-  run at 12.5 px/um sits in between (11.49 THz, 25.2 um^2), so the steps shrink (0.96 then 0.45 THz) but
-  have not stopped. Extrapolating the last two puts the continuum peak near 13 THz at second order and
-  near 14 THz at first order. The Poynting check, by contrast, holds to 0.06-0.13 % at every resolution:
-  the absorbed power is accounted for exactly on each grid, it is the resonance that moves. A first
-  guess, that 10 px/um was an outlier because the rod's faces sit on grid planes there, was tested with
-  7.5 and 12.5 px/um (every face a quarter cell off both Yee lattices) and is wrong: 12.5 falls between
-  10 and 15. A likely cause, not established here, is the field concentration at the corners of the square
-  metal cross-section (Re eps ~ -50 near 12 THz), which a rod 6-9 cells wide resolves poorly. Pinning the
-  peak needs 20 px/um or more (about 4 h for E at 20 px/um on this machine) or a rounded cross-section.
+- **The receiving rod's registered convergence checks (10 vs 15 px/um) fail and stay red, but the rod does
+  converge.** Scratch runs at 7.5, 12.5 and 20 px/um (2026-10-15/16) give, for the absorption peak:
 
-## What the run gives (2026-10-15, results/RESULTS.md)
+  | px/um | rod faces relative to the Yee grid | peak (THz) | sigma_abs (um^2) | heat at 1 kW/cm^2 | wall |
+  |---|---|---|---|---|---|
+  | 7.5 | a quarter cell off both lattices | 13.02 | 32.5 | 326 uW, dT 15.8 K | 5 min |
+  | 10 | on grid planes | 10.53 | 20.8 | 201 uW, dT 9.7 K | 16 min |
+  | 12.5 | a quarter cell off both lattices | 11.49 | 25.2 | 244 uW, dT 11.8 K | 31 min |
+  | 15 | on half-cell planes | 11.94 | 28.4 | 285 uW, dT 13.8 K | 72 min |
+  | 20 | on grid planes | 11.44 | 24.2 | 236 uW, dT 11.5 K | 5.7 h |
 
-At 15 px/um the 5 um rod absorbs most strongly at 12.0 THz (lambda = 25 um, so L / lambda = 0.2: the
-lossy-metal rod resonates far shorter than a perfect-conductor half-wave dipole would). There sigma_abs is
-28.4 um^2, 9.5x the rod's projected area, and the re-radiated (scattering) cross-section is 3.4 um^2, so
-about 89 % of the power the rod intercepts becomes heat. Under 1 kW/cm^2 the rod absorbs 285 uW and
-re-radiates 34 uW. The heat follows the induced current, peaking at 93 W/m at mid-length, and the middle
-of a rod bridging two heat-sunk contacts warms by 13.8 K. Given the convergence above, these absolute
-numbers carry an uncertainty of roughly 25 % in sigma_abs and 10-15 % in frequency.
+  20 and 12.5 px/um agree to 0.4 % in frequency and 4 % in sigma_abs; the gated pair brackets them, 10 px/um
+  low and 15 px/um high. So the grid phase of the rod's faces matters at these resolutions, presumably
+  because where a face falls relative to the Yee samples shifts the effective edge of this thin, strongly
+  negative-eps rod (not established here). An earlier reading of the 12.5 px/um point as
+  refuting that (it falls between 10 and 15) and an extrapolation from 10/12.5/15 to 13-14 THz were wrong:
+  the 20 px/um run settles it. The Poynting check holds to 0.04-0.26 % at every resolution, so the
+  absorbed power is accounted for exactly on each grid; it is the resonance that moves with the grid. A
+  sound convergence pair for this geometry is 12.5 and 20 px/um (about 6 h for stage E), or any two
+  resolutions with the faces at the same grid phase.
+
+## What the run gives (2026-10-15/16)
+
+Best estimate (20 px/um, scratch run; the gated 15 px/um run in results/RESULTS.md overshoots it by 4 % in
+frequency and 17 % in sigma_abs): the 5 um rod absorbs most strongly near 11.45 THz (lambda = 26 um, so
+L / lambda = 0.19: the lossy-metal rod resonates far shorter than a perfect-conductor half-wave dipole
+would). There sigma_abs is 24.2 um^2, 8x the rod's projected area, and the re-radiated (scattering)
+cross-section is 2.1 um^2, so about 92 % of the power the rod intercepts becomes heat. Under 1 kW/cm^2 at
+11 THz the rod absorbs 236 uW; the heat follows the induced current, peaking at 77 W/m at mid-length, and
+the middle of a rod bridging two heat-sunk contacts warms by 11.5 K. The 12.5 px/um run agrees within 4 %.
 The transmitting dipole, by contrast, deposits 14-69 % of its heat within 0.3 um of the feed terminals.
 
 ## Assumptions that are inputs, not results
