@@ -1,0 +1,34 @@
+{
+  "build": "apple-bottom 1.4.0 (c5a1fa6a8166)",
+  "timestamp": "2026-10-15T20:11:03Z",
+  "pid": 48112,
+  "threshold_ns": 0,
+  "routines": [
+    {
+      "name": "zgemm",
+      "calls": 11658,
+      "total_ns": 23917000000,
+      "gpu_calls": 11658, "cpu_calls": 0,
+      "gpu_ns": 23917000000, "cpu_ns": 0,
+      "gpu_stage_ns": {"init": 690000, "alloc": 41000000, "pack": 7757000000, "upload": 2630000000, "kernel": 9249000000, "download": 444000000, "epilogue": 1661000000, "other": 2134310000},
+      "fallbacks": {"no_device": 0, "too_large": 0, "gpu_failed": 0, "other": 0},
+      "max_m": 1419, "max_n": 8, "max_k": 1419,
+      "avg_m": 566.2, "avg_n": 4.0, "avg_k": 383.2,
+      "dim_histogram": [6702, 1216, 0, 0, 3740, 0, 0, 0],
+      "ns_by_bin": [10581178082, 4213559930, 0, 0, 9122261988, 0, 0, 0]
+    },
+    {
+      "name": "dgemm",
+      "calls": 522,
+      "total_ns": 972000000,
+      "gpu_calls": 522, "cpu_calls": 0,
+      "gpu_ns": 972000000, "cpu_ns": 0,
+      "gpu_stage_ns": {"init": 110000000, "alloc": 7600000, "pack": 401000000, "upload": 53000000, "kernel": 297000000, "download": 7200000, "epilogue": 48800000, "other": 47400000},
+      "fallbacks": {"no_device": 0, "too_large": 0, "gpu_failed": 0, "other": 0},
+      "max_m": 63758, "max_n": 171, "max_k": 63758,
+      "avg_m": 1119.6, "avg_n": 20.4, "avg_k": 1107.0,
+      "dim_histogram": [502, 0, 10, 0, 0, 0, 0, 10],
+      "ns_by_bin": [161137986, 0, 551936456, 0, 0, 0, 0, 258925558]
+    }
+  ]
+}

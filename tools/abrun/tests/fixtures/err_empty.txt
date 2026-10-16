@@ -1,0 +1,5 @@
+dyld[50001]: /Users/grantheileman/qe-test/ab-frozen/33fbaa8c8944/libapplebottom.dylib
+=== apple-bottom 1.4.0 (c5a1fa6a8166) BLAS profile, pid 50001 ===
+No BLAS-ABI calls recorded.
+
+AB_REPORT[50001] apple-bottom 1.4.0 (c5a1fa6a8166) AB_MODE=cpu

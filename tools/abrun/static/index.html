@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>abrun: QE CPU/GPU A/B runner</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header id="statusbar" class="statusbar" aria-label="machine status">
+  <span class="brand">abrun <span id="version" class="muted"></span></span>
+  <span id="chip-load" class="chip" title="1-minute load average (os.getloadavg)">load1 -</span>
+  <span id="chip-tlock" class="chip hidden" title="~/Dev/.timing-lock">timing lock</span>
+  <span id="chip-machlock" class="chip" title="machlock bench probe (non-blocking LOCK_SH on machine.lock)">machlock -</span>
+  <span id="chip-foreign" class="chip" title="foreign solvers (pw.x/yambo/mpirun/campaign scripts outside abrun's process groups)">foreign 0</span>
+  <span id="chip-power" class="chip" title="pmset -g batt">power -</span>
+  <span id="chip-disk" class="chip" title="free disk under the runs directory">disk -</span>
+  <span id="chip-worker" class="chip" title="the single worker thread: idle / running / queued / paused">worker -</span>
+  <button id="btn-pause" class="btn small" title="pause the worker between jobs">Pause</button>
+  <span id="chip-timed" class="chip" title="timed runs possible: load1 < 1.5, AC, no timing lock, no bench held, no foreign solvers">timed: -</span>
+  <span id="chip-fake" class="chip warn hidden" title="--fake-pw: tests/fake_pw.py instead of a solver">FAKE pw.x</span>
+  <span id="chip-conn" class="chip muted" title="global EventSource state">events: connecting</span>
+</header>
+
+<main class="grid">
+
+  <!-- ============================================================ LAUNCH -->
+  <section id="launch" class="panel" aria-label="launch">
+    <h2>Launch</h2>
+    <form id="launch-form" autocomplete="off" onsubmit="return false">
+
+      <label class="row"><span>Preset</span>
+        <select id="f-preset"></select></label>
+      <label class="row hidden" id="row-input-path"><span>.in path</span>
+        <input id="f-input-path" type="text" placeholder="/absolute/path/to/input.in" spellcheck="false"></label>
+      <div id="preset-card" class="card"></div>
+      <div class="row-btns">
+        <button type="button" id="btn-show-input" class="btn small">Show rewritten input</button>
+      </div>
+      <pre id="preset-input-pre" class="mono box hidden"></pre>
+
+      <label class="row"><span>Binary</span>
+        <select id="f-binary"></select></label>
+      <label class="row check"><input id="f-show-dev" type="checkbox"> <span>Show dev builds (never citable, rebuilt by other sessions; the binary card says which dylib each loads and flags a LIVE one)</span></label>
+      <div id="binary-card" class="card"></div>
+
+      <fieldset id="mode-radios" class="modes"><legend>Mode</legend></fieldset>
+
+      <details id="advanced">
+        <summary>Advanced</summary>
+        <div class="adv-grid">
+          <label><span>MPI ranks</span><input id="f-ranks" type="number" min="1" max="12" value="1"></label>
+          <label><span>-nk pools</span><input id="f-nk" type="number" min="1" max="12" value="1"></label>
+          <label><span>OMP threads</span><input id="f-omp" type="number" min="1" max="12" value="1"></label>
+          <label class="check"><input id="f-allow-omp" type="checkbox"> <span>allow OMP&gt;1</span></label>
+          <label><span>AB_MIN_GPU_DIM</span><input id="f-min-gpu-dim" type="number" min="0" placeholder="library default 32"></label>
+          <label class="check"><input id="f-profile-json" type="checkbox" checked> <span>AB_PROFILE + JSON</span></label>
+          <label class="check"><input id="f-report" type="checkbox" checked> <span>AB_REPORT</span></label>
+          <label class="check"><input id="f-trace" type="checkbox"> <span>AB_TRACE</span></label>
+          <label class="check"><input id="f-verify-dylib" type="checkbox" checked> <span>verify dylib (DYLD_PRINT_LIBRARIES)</span></label>
+          <label class="check"><input id="f-purge-tmp" type="checkbox" checked> <span>purge tmp/ after run</span></label>
+        </div>
+        <fieldset id="lock-radios" class="locks"><legend>Lock</legend>
+          <label><input type="radio" name="lock" value="auto" checked> auto <small>(share; build when a bench is held; bench when timed)</small></label>
+          <label><input type="radio" name="lock" value="share"> share</label>
+          <label><input type="radio" name="lock" value="build"> build</label>
+          <label><input type="radio" name="lock" value="bench"> bench</label>
+        </fieldset>
+        <label class="check"><input id="f-timed" type="checkbox"> <span>timed (forces machlock bench + caffeinate)</span></label>
+        <div id="timed-blockers" class="small muted"></div>
+        <label class="row"><span>Label</span><input id="f-label" type="text" placeholder="free text"></label>
+      </details>
+
+      <div class="preview-head">
+        <span>Plan preview</span>
+        <button type="button" id="btn-copy-shell" class="btn small">Copy shell line</button>
+      </div>
+      <div id="preview-violations" class="violations hidden"></div>
+      <pre id="preview" class="mono box">...</pre>
+
+      <div class="row-btns">
+        <button type="button" id="btn-run" class="btn primary" disabled>Run</button>
+        <button type="button" id="btn-abset" class="btn">Queue A/B set</button>
+        <button type="button" id="btn-clear" class="btn">Clear</button>
+      </div>
+      <fieldset id="legs" class="legs"><legend>A/B legs</legend>
+        <label><input type="checkbox" name="leg" value="reference" checked> reference</label>
+        <label><input type="checkbox" name="leg" value="ab_cpu" checked> ab_cpu</label>
+        <label><input type="checkbox" name="leg" value="ab_auto"> ab_auto</label>
+        <label><input type="checkbox" name="leg" value="ab_gpu"> ab_gpu</label>
+        <label><input type="checkbox" name="leg" value="ab_gpu_all" checked> ab_gpu_all</label>
+      </fieldset>
+      <div id="launch-msg" class="msg"></div>
+    </form>
+  </section>
+
+  <!-- ============================================================ RUNS + LOG -->
+  <section id="runs" class="panel" aria-label="runs and log">
+    <h2>Runs</h2>
+    <div class="filters">
+      <select id="flt-preset"><option value="">preset: all</option></select>
+      <select id="flt-mode"><option value="">mode: all</option></select>
+      <select id="flt-binary"><option value="">binary: all</option></select>
+      <select id="flt-state"><option value="">state: all</option>
+        <option value="queued">queued</option><option value="waiting_timing_lock">waiting_timing_lock</option>
+        <option value="waiting_guard">waiting_guard</option><option value="running">running</option>
+        <option value="cancelling">cancelling</option><option value="done">done</option>
+        <option value="failed">failed</option><option value="cancelled">cancelled</option></select>
+      <button id="btn-refresh" class="btn small">Refresh</button>
+      <span id="runs-count" class="muted small"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="runs-table" class="runs">
+        <thead><tr>
+          <th>state</th><th>preset</th><th>binary</th><th>mode</th><th>E_tot (Ry)</th><th>dE vs expected</th>
+          <th>iters</th><th>QE wall (s)</th><th>GPU / GEMM</th><th>lock</th><th>label</th><th>actions</th>
+        </tr></thead>
+        <tbody id="runs-body"></tbody>
+        <tbody id="campaign-rows"></tbody>
+      </table>
+    </div>
+
+    <h2 class="log-head"><span id="log-title">Log</span>
+      <span class="log-tools">
+        <select id="f-stream" title="stream filter">
+          <option value="all">all</option><option value="out">out</option><option value="err">err</option>
+          <option value="ab">AB_* only</option><option value="guard">guard</option>
+        </select>
+        <label class="check small"><input id="f-autoscroll" type="checkbox" checked> autoscroll</label>
+        <button id="btn-log-cancel" class="btn small danger hidden">Cancel</button>
+        <a id="dl-out" class="btn small link" download>out.txt</a>
+        <a id="dl-err" class="btn small link" download>err.txt</a>
+        <a id="dl-profile" class="btn small link" download>ab_profile.json</a>
+        <a id="dl-summary" class="btn small link" download>summary.json</a>
+      </span>
+    </h2>
+    <div id="log-state" class="strip"></div>
+    <div id="log-progress" class="strip"><div class="bar"><div id="progress-fill" class="fill"></div></div><span id="progress-text"></span></div>
+    <div id="log-console" class="console mono" aria-live="polite"></div>
+    <div id="log-suppressed" class="small muted"></div>
+    <div id="result-strip" class="strip result hidden"></div>
+  </section>
+
+  <!-- ============================================================ COMPARE -->
+  <section id="compare" class="panel" aria-label="compare">
+    <h2>Compare</h2>
+    <div class="small muted">tick runs, pick the reference (radio); rows on the same pw.x and the same libapplebottom are the one-binary BLAS A/B (1e-8 Ry); every other row is not (the tol tooltip names both builds)</div>
+    <div id="cmp-list" class="cmp-list"></div>
+    <div class="row-btns">
+      <button id="btn-compare" class="btn primary small">Compare</button>
+      <button id="btn-copy-md" class="btn small" disabled>Copy markdown</button>
+      <button id="btn-dl-json" class="btn small" disabled>Download compare.json</button>
+      <span id="cmp-msg" class="small muted"></span>
+    </div>
+    <div id="cmp-table" class="table-wrap"></div>
+    <div id="plots" class="plots">
+      <figure><figcaption>SCF convergence: log10 |E_i - E_final| (Ry)</figcaption><div id="plot-scf" class="plot"></div></figure>
+      <figure><figcaption>QE wall (s), observations; hatched = untimed</figcaption><div id="plot-wall" class="plot"></div></figure>
+      <figure><figcaption>GEMM calls by max(M,N,K) bin, per run</figcaption><div id="plot-hist" class="plot"></div></figure>
+    </div>
+  </section>
+
+</main>
+
+<footer id="footer" class="footer" title="source: apple-bottom benchmarks/results/2026-10-15-c5a1fa6-qe-si64-opt/tables.md (apple-bottom 1.4.0 release c5a1fa6, frozen 33fbaa8c8944, gpu = AB_MODE=gpu at the library floor AB_MIN_GPU_DIM=32); np1 gpu/cpu 1.295 (A), 1.402 (B), 1.141 (C); np8nk4 1.055 (A), 1.214 (B); np8 1.163 (C); auto: 0 GPU calls in every run">
+Wall times are observations unless a run shows grade=bench. Measured with apple-bottom 1.4.0 on this M2 Max (campaign 2026-10-15, si64 shapes A/B/C): gpu mode at the library floor took 1.14-1.40x the cpu wall at 1 rank and 1.06-1.21x at 8 ranks, and auto routed 0 GEMMs to the GPU (apple-bottom benchmarks/results/2026-10-15-c5a1fa6-qe-si64-opt/tables.md). No wall was measured for AB_MIN_GPU_DIM=0; the point of this tool is energy/force parity and dispatch visibility.
+</footer>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

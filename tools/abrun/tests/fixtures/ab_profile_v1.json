@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-10-15T05:30:32Z",
+  "pid": 77022,
+  "routines": [
+    {
+      "name": "dgemm",
+      "calls": 580,
+      "total_ns": 1057545523,
+      "gpu_dispatch_count": 580,
+      "amx_fallback_count": 0,
+      "max_m": 63758, "max_n": 171, "max_k": 63758,
+      "avg_m": 1119.6, "avg_n": 20.4, "avg_k": 1107.0,
+      "dim_histogram": [560, 0, 10, 0, 0, 0, 0, 10],
+      "ns_by_bin": [161137986, 0, 551936456, 0, 0, 0, 0, 344471081]
+    },
+    {
+      "name": "zgemm",
+      "calls": 13103,
+      "total_ns": 17651514441,
+      "gpu_dispatch_count": 13103,
+      "amx_fallback_count": 0,
+      "max_m": 1419, "max_n": 8, "max_k": 1419,
+      "avg_m": 566.2, "avg_n": 4.0, "avg_k": 383.2,
+      "dim_histogram": [6702, 1216, 0, 0, 5185, 0, 0, 0],
+      "ns_by_bin": [10581178082, 4213559930, 0, 0, 2856776429, 0, 0, 0]
+    }
+  ]
+}

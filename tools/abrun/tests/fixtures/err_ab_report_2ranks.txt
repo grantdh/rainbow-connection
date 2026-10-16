@@ -1,0 +1,21 @@
+dyld[47817]: /Users/grantheileman/qe-test/ab-frozen/33fbaa8c8944/libapplebottom.dylib
+dyld[47817]: /opt/homebrew/opt/openblas/lib/libopenblas.0.dylib
+dyld[47820]: /Users/grantheileman/qe-test/ab-frozen/33fbaa8c8944/libapplebottom.dylib
+apple-bottom: AB_DISPATCH_TABLE=/nonexistent/dispatch_table.txt could not be read; using the built-in table
+AB_PROFILE zgemm M=1419 N=8 K=1419  init=0.000 alloc=0.021 pack=1.202 upload=0.411 kernel=3.410 download=0.070 epilogue=0.255 other=0.512  total=5.881 ms
+AB_PROFILE zgemm M=1419 N=4 K=1419  init=0.000 alloc=0.020 pack=0.602 upload=0.205 kernel=1.705 download=0.035 epilogue=0.127 other=0.256  total=2.950 ms
+AB_PROFILE dgemm M=63758 N=171 K=63758  GPU fallback to cblas: operand too large
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG
+=== apple-bottom 1.4.0 (c5a1fa6a8166) BLAS profile, pid 47817 ===
+ab_prof: JSON written to /Users/grantheileman/x/ab_profile.json
+AB_REPORT[47817] apple-bottom 1.4.0 (c5a1fa6a8166) AB_MODE=gpu
+AB_REPORT[47817] zgemm calls=5826 gpu_calls=219 cpu_calls=5607 gpu_calls%=3.8 total_ms=38903.375 gpu_ms=38109.483 cpu_ms=793.892 gpu_time%=98.0 fallbacks=0
+AB_REPORT[47817] zgemm gpu_stages_ms init=0.687 alloc=41.704 pack=7757.386 upload=2630.195 kernel=22249.112 download=444.500 epilogue=1661.033 other=3324.866
+AB_REPORT[47817] dgemm calls=528 gpu_calls=16 cpu_calls=512 gpu_calls%=3.0 total_ms=972.499 gpu_ms=970.981 cpu_ms=1.518 gpu_time%=99.8 fallbacks=1
+AB_REPORT[47817] dgemm gpu_stages_ms init=110.486 alloc=7.602 pack=401.223 upload=53.458 kernel=297.404 download=7.262 epilogue=48.870 other=44.676
+AB_REPORT[47817] dgemm fallbacks no_device=0 too_large=1 gpu_failed=0 other=0
+AB_REPORT[47820] apple-bottom 1.4.0 (c5a1fa6a8166) AB_MODE=gpu
+AB_REPORT[47820] zgemm calls=6233 gpu_calls=247 cpu_calls=5986 gpu_calls%=4.0 total_ms=40049.710 gpu_ms=39172.462 cpu_ms=877.248 gpu_time%=97.8 fallbacks=0
+AB_REPORT[47820] zgemm gpu_stages_ms init=0.721 alloc=51.193 pack=8677.404 upload=2871.639 kernel=22042.052 download=458.038 epilogue=1706.312 other=3365.105
+AB_REPORT[47820] dgemm calls=528 gpu_calls=16 cpu_calls=512 gpu_calls%=3.0 total_ms=972.368 gpu_ms=970.849 cpu_ms=1.519 gpu_time%=99.8 fallbacks=0
+AB_REPORT[47820] dgemm gpu_stages_ms init=109.856 alloc=6.825 pack=399.616 upload=50.674 kernel=312.322 download=5.731 epilogue=44.837 other=40.988

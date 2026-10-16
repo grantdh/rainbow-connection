@@ -1,0 +1,4 @@
+#!/bin/sh
+REPO="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${MUPPET_MEEP_PYTHON:-$HOME/miniconda3_arm64/envs/meep_arm/bin/python}"
+PYTHONPATH="$REPO/tools${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m abrun "$@"
