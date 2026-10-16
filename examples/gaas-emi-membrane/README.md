@@ -23,7 +23,11 @@ QE PAW GaAs SCF+NSCF (8x8x8, 20 bands)           on disk: workflows/gaas-emi-shi
 ~/miniconda3_arm64/envs/meep_arm/bin/python run.py          # ~80 s; --skip-meep for ~5 s
 ```
 
-## Results (2026-10-14, all checks pass; results/RESULTS.md)
+## Results (2026-10-14, 21 gated checks pass, 0 fail, 3 reported; results/RESULTS.md)
+
+The three informational rows (E0 edge strength, IR refractive index vs experiment, sub-gap opacity of the
+Lorentz fit) are filed with `checks.report()`: they are not gates and are not counted. The `results/RESULTS.md`
+on disk predates that change and lists them as PASS (24 PASS rows); the next run prints them as REPORTED.
 
 | membrane | SE, transfer matrix @ 75 GHz | thin-film formula | paper | measured (65-85 GHz) |
 |---|---|---|---|---|

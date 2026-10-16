@@ -70,7 +70,9 @@ with a 2.4 us period, longer than the record.
 
 ## Results
 
-All checks pass (2026-10-15, 155 s, machine shared with another session). Worst error of the gated
+29 gated checks pass, 0 fail, 1 reported (2026-10-15, 155 s, machine shared with another session; the
+as-coded LoopFDTD deviation is filed with `checks.report()`, listed as PASS in the `results/RESULTS.md` on
+disk and printed as REPORTED by the next run). Worst error of the gated
 lines against the discrete Yee modes of the expected box, and against the other box size:
 
 | engine | box | gated lines | worst error, expected box | worst error, other box | (3,1,0) damping (1/us) | undamped-model fit residual |

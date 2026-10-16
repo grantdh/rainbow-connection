@@ -367,9 +367,9 @@ def main() -> int:
                 checks.add("meep: the continuum formula is measurably worse than the Yee formula", cont_worst > 3 * worst[box], f"continuum {cont_worst:.3f} % vs Yee {worst[box]:.4f} %", "numerical dispersion resolved")
         else:
             rows = [r for r in per_model["(N-1)*dx"] if r["amp"] >= AMP_GATE]
-            checks.add("loopfdtd (as coded): deviation from the (N-1)*dx Yee box (finding, not gated)", True,
-                       f"lines off by {min((r['err_pct'] for r in rows), default=float('nan')):+.3f} .. {max((r['err_pct'] for r in rows), default=float('nan')):+.3f} %",
-                       "the single boundary guard clamps the normal E on the far half-planes; see loopfdtd_fixed")
+            checks.report("loopfdtd (as coded): deviation from the (N-1)*dx Yee box (finding, not gated)",
+                          f"lines off by {min((r['err_pct'] for r in rows), default=float('nan')):+.3f} .. {max((r['err_pct'] for r in rows), default=float('nan')):+.3f} %",
+                          "the single boundary guard clamps the normal E on the far half-planes; see loopfdtd_fixed")
 
     # ---------------------------------------------------------------- 4. plot + results
     stage("4. Plot and RESULTS.md")
@@ -394,7 +394,7 @@ def main() -> int:
         print(f"  plot skipped: {exc}")
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
-    L = [f"# Example 6 results: Yee dispersion ({S['provenance']['date']})", "", f"{S['provenance']['hardware']}, box {NX}x{NY}x{NZ} cells of {DX} m, {args.steps} steps, ring-down from {T_RINGDOWN*1e9:.0f} ns", "",
+    L = [f"# Example 6 results: Yee dispersion ({S['provenance']['date']})", "", f"{S['provenance']['hardware']}, box {NX}x{NY}x{NZ} cells of {DX} m, {args.steps} steps, ring-down from {T_RINGDOWN*1e9:.0f} ns", "", checks.summary(), "",
          "## Checks", "", checks.markdown(), ""]
     for eng, e in S["engines"].items():
         box = expected_box.get(eng, "(N-1)*dx")
@@ -408,7 +408,7 @@ def main() -> int:
         L.append("")
     L += ["## Files", "", "- results/bin/*_empty.swift (generated copies; loopfdtd_fixed carries the per-component guard), results/<engine>/timedomain.txt, results/summary.json, results/yee_dispersion.png"]
     (RES / "RESULTS.md").write_text("\n".join(L) + "\n")
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 

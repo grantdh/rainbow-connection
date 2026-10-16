@@ -197,8 +197,8 @@ def main() -> int:
         S["control_novnl"] = {"file": str(fc[0]), "eps1_0": float(e1[0]), "fsum_fraction": frac_c, "kk_lhs": float(e1[0] - 1), "kk_rhs": kk_c}
         print(f"  {nbc} bands, [r,Vnl] {S['r_vnl_control']}: eps1(0) = {e1[0]:.3f}; f-sum = {frac_c:.3f} of wp^2 (with commutator: {runs[nbc]['fsum_fraction']:.3f})")
         checks.add("control run excluded the commutator", S["r_vnl_control"] == "no", f"[r,Vnl] included: {S['r_vnl_control']}", "report says no")
-        checks.add("f-sum of the p/m-only control (informational: no sum rule holds for p/m with a non-local potential)", True,
-                   f"{frac_c:.3f} of wp^2; eps1(0) = {e1[0]:.3f}", "reported; [x, H] = i hbar p/m fails for a non-local H, so this number obeys no sum rule")
+        checks.report("f-sum of the p/m-only control (informational: no sum rule holds for p/m with a non-local potential)",
+                      f"{frac_c:.3f} of wp^2; eps1(0) = {e1[0]:.3f}", "reported; [x, H] = i hbar p/m fails for a non-local H, so this number obeys no sum rule")
         checks.add("the commutator changes the oscillator strength by more than a few per cent", abs(runs[nbc]["fsum_fraction"] - frac_c) > 0.02,
                    f"with [r,Vnl] {runs[nbc]['fsum_fraction']:.3f} vs p/m only {frac_c:.3f} of wp^2 ({(runs[nbc]['fsum_fraction'] / frac_c - 1) * 100:+.1f} %)",
                    "|difference| > 0.02 (Read and Needs 1991: the non-local term is a 10-20 % effect on Si matrix elements)")
@@ -229,7 +229,7 @@ def main() -> int:
     checks.add("Yambo direct gap == QE Gamma gap (bands 5-4)", abs(gap_y - qe_gamma_gap) < 2e-3, f"Yambo {gap_y:.4f} eV vs QE {qe_gamma_gap:.4f} eV", "|dE| < 2 meV")
     rvnl = re.search(r"\[r,Vnl\] included\s*:\s*(\w+)", (y / f"r-ip{max(runs)}_optics_chi").read_text(errors="ignore")) if runs else None
     S["r_vnl_included"] = rvnl.group(1) if rvnl else "unknown"
-    checks.add("non-local commutator in the dipoles (informational)", True, f"[r,Vnl] included: {S['r_vnl_included']}", "yes expected when SAVE/ns.kb_pp_pwscf exists")
+    checks.report("non-local commutator in the dipoles (informational)", f"[r,Vnl] included: {S['r_vnl_included']}", "yes expected when SAVE/ns.kb_pp_pwscf exists")
     S["gap_yambo_eV"] = gap_y; S["gap_yambo_indirect_eV"] = gap_y_ind; S["qe_gamma_gap_eV"] = qe_gamma_gap
 
     # ---------------------------------------------------------------- 4. plot + results
@@ -251,14 +251,14 @@ def main() -> int:
         print(f"  plot skipped: {exc}")
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
-    L = [f"# Example 5 results: Si sum rules and plasmon ({S['provenance']['date']})", "", f"pseudo {PSEUDO.name}, a = {A_BOHR} bohr, ecutwfc {ECUT} Ry, {NBND} NSCF bands, window 0-{EMAX:g} eV, broadening {BROAD} eV; hbar wp = {wp_ev:.2f} eV", "",
+    L = [f"# Example 5 results: Si sum rules and plasmon ({S['provenance']['date']})", "", f"pseudo {PSEUDO.name}, a = {A_BOHR} bohr, ecutwfc {ECUT} Ry, {NBND} NSCF bands, window 0-{EMAX:g} eV, broadening {BROAD} eV; hbar wp = {wp_ev:.2f} eV", "", checks.summary(), "",
          "## Checks", "", checks.markdown(), "", "## Numbers", "", "| bands | eps1(0) | f-sum / wp^2 | KK: eps1(0)-1 | (2/pi) Int eps2/w | plasmon (eV) |", "|---|---|---|---|---|---|"] + ([f"[r,Vnl] included: {S.get('r_vnl_included')}; Yambo gaps: indirect {S.get('gap_yambo_indirect_eV')} eV, direct {S.get('gap_yambo_eV')} eV (QE Gamma {S.get('qe_gamma_gap_eV')} eV)", f"Control without [r,Vnl] (80 bands): f-sum {S.get('control_novnl', {}).get('fsum_fraction', float('nan')):.3f} of wp^2, eps1(0) = {S.get('control_novnl', {}).get('eps1_0', float('nan')):.3f}"])
     for nb in BANDS:
         if nb in runs:
             r = runs[nb]; L.append(f"| {nb} | {r['eps1_0']:.3f} | {r['fsum_fraction']:.3f} | {r['kk_lhs']:.3f} | {r['kk_rhs']:.3f} | {r['plasmon_eV']:.2f} |")
     L += ["", "## Files", "", "- results/qe/{scf,nscf}.out, results/yambo/o-ip{20,40,80}.eps_q1_ip, results/yambo/r_setup, results/summary.json, results/si_sum_rules.png"]
     (RES / "RESULTS.md").write_text("\n".join(L) + "\n")
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 

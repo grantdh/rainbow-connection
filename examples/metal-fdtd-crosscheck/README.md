@@ -35,6 +35,11 @@ version of this test (32,000 steps, matrix-pencil lines against the discrete Yee
 `../yee-dispersion`: there MEEP, MEEPhistopheles and a guard-fixed LoopFDTD land on their boxes' Yee
 modes to 1e-5 %, and LoopFDTD as coded is 1 % off in a mode-dependent way.
 
+The four engine-vs-engine comparison rows (empty-box mode weights, gap-fixed and as-shipped dipole,
+MEEPhistopheles 3-field model) are filed with `checks.report()`: reported, not gated, not counted. The
+`results/RESULTS.md` on disk (2026-10-15) predates that change and lists them as PASS (20 PASS, 2 FAIL); on
+the same data the next run prints 16 gated checks pass, 2 fail, 4 reported.
+
 ## Findings
 
 - **Gap bug in both Swift dipole programs.** `gapCells` is 1 for a 1 cm gap on 2.5 cm cells, and

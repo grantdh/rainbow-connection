@@ -167,7 +167,7 @@ def main() -> int:
             rows = {r["name"]: r for r in (ab_res[mode].get("profile") or {}).get("routines", [])}
             z = rows.get("zgemm", {})
             return z.get("calls"), z.get("gpu_dispatch_count"), z.get("amx_fallback_count")
-        (nc, gc, fc), (ng, gg, fg) = dispatch("cpu"), dispatch("gpu")
+        (nc, gc, _), (ng, gg, fg) = dispatch("cpu"), dispatch("gpu")
         checks.add("profiler: cpu mode dispatched no ZGEMM to the GPU", nc is not None and gc == 0, f"{gc}/{nc} GPU dispatches",
                    "gpu_dispatch_count == 0 (AB_PROFILE_JSON of the frozen library)")
         checks.add("profiler: gpu mode dispatched every ZGEMM to the GPU with no fallback", ng is not None and gg == ng and fg == 0,
@@ -309,7 +309,7 @@ def main() -> int:
     summary["total_wall_s"] = time.time() - t_start
     exlib.dump_json(RES / "summary.json", summary)
     (RES / "RESULTS.md").write_text(results_md(summary, checks))
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {summary['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {summary['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 
@@ -319,6 +319,7 @@ def results_md(s: dict, checks: exlib.Checks) -> str:
              f"rainbow-connection {p['rainbow_connection_commit']}, {p['hardware']}, macOS {p['macos']}, "
              f"reference pw.x {p['pw_x_reference']} (QE {s['qe']['scf'].get('qe_version')}, {p['pw_x_reference_ab_symbols']} apple-bottom symbols), "
              f"MEEP {s.get('meep', {}).get('resolution', '-')} px/um, load1 {p['load1_at_start']:.2f}", "",
+             checks.summary(), "",
              "## Checks", "", checks.markdown(), "",
              "## Numbers", "",
              f"- QE SCF total energy: {s['qe']['scf'].get('total_energy_Ry')} Ry in {s['qe']['scf'].get('scf_iterations')} iterations (reference {REF_ENERGY_RY})",

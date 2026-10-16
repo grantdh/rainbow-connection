@@ -153,7 +153,7 @@ def main() -> int:
         print(f"  plot skipped: {exc}")
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
-    L = [f"# Example 7 results: skin effect ({S['provenance']['date']})", "", f"sigma = {SIGMA:.3e} S/m, eps_r = {EPS_R}, 75 GHz, skin depth {delta*1e6:.2f} um", "",
+    L = [f"# Example 7 results: skin effect ({S['provenance']['date']})", "", f"sigma = {SIGMA:.3e} S/m, eps_r = {EPS_R}, 75 GHz, skin depth {delta*1e6:.2f} um", "", checks.summary(), "",
          "## Checks", "", checks.markdown(), "", "| d (um) | d/delta | SE exact (dB) | R | A | B | 8.686 d/delta | thin-film |", "|---|---|---|---|---|---|---|---|"]
     for r in rows:
         L.append(f"| {r['d_um']:.1f} | {r['d_over_delta']:.2f} | {r['SE_tmm']:.2f} | {r['R']:.2f} | {r['A']:.2f} | {r['B']:.2f} | {r['A_cl']:.2f} | {r['thin']:.2f} |")
@@ -161,7 +161,7 @@ def main() -> int:
         L += ["", f"MEEP 1D ({MEEP_D_UM:g} um, 4000 px/mm): max |SE_meep - SE_tmm| = {S['meep']['max_dSE']:.3f} dB over 65-85 GHz ({S['meep']['wall_s']:.0f} s)."]
     L += ["", "## Files", "", "- results/summary.json, results/skin_effect.png" + (", results/meep/spectrum.json" if "meep" in S else " (MEEP stage not run)")]
     (RES / "RESULTS.md").write_text("\n".join(L) + "\n")
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 

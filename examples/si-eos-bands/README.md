@@ -42,7 +42,8 @@ binary is `/usr/local/bin/pw.x` (nm-verified apple-bottom-free); the parity leg 
 
 ## Results
 
-All checks pass (2026-10-15, 314 s). Reference pw.x: a0 = 5.4695 A, B0 = 88.7 GPa, B0' = 4.31 (fit rms
+19 gated checks pass, 0 fail, 1 reported (2026-10-15, 314 s; the L1c row is filed with `checks.report()`,
+listed as PASS in the `results/RESULTS.md` on disk and printed as REPORTED by the next run). Reference pw.x: a0 = 5.4695 A, B0 = 88.7 GPa, B0' = 4.31 (fit rms
 8.7e-7 Ry) against the all-electron Delta-test reference 5.4695 A, 88.5 GPa, 4.31. apple-bottom gpu leg:
 every energy identical to the reference to the printed 1e-8 Ry, same a0 and B0 to 5 digits, 115,101 of
 115,101 BLAS calls dispatched to the GPU. Bands at a_exp: Gamma25' threefold degenerate, X1c pair

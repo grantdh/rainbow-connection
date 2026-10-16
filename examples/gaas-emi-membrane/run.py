@@ -112,8 +112,8 @@ def main() -> int:
     checks.add("E0 edge sits at the scissored gap", abs(e0 - EXP_GAP) < 0.1, f"{e0:.2f} eV", "|E0 - 1.42| < 0.1 eV")
     checks.add("E1 critical point present (expt 2.9 eV)", bool(e1_pk), f"{e1_pk}", "a peak in 2.5-3.3 eV")
     checks.add("E2 critical point present (expt 4.7 eV)", bool(e2_pk), f"{e2_pk}", "a peak in 4.1-5.2 eV")
-    checks.add("E0 edge strength (informational: IP+scissor overshoots)", True, f"eps2(E0) = {e2.max():.1f}",
-               "experiment ~3; the inflated Gamma-point edge is the known IP + rigid-scissor artefact")
+    checks.report("E0 edge strength (informational: IP+scissor overshoots)", f"eps2(E0) = {e2.max():.1f}",
+                  "experiment ~3; the inflated Gamma-point edge is the known IP + rigid-scissor artefact")
     onset = e0
     S["epsilon"] = {"file": str(files[0]), "eps1_0": float(e1[0]), "onset_eV": onset, "peaks_eV": pk, "eps2_max": float(e2.max()), "causal": not eps["resonant_only"]}
 
@@ -188,11 +188,11 @@ def main() -> int:
                    f"[{Ts.min():.2f}, {Ts.max():.2f}]", "paper Fig. 2: 40-100 % with fringes, 950-2500 nm")
         checks.add(f"{d_nm} nm: fringe count self-consistent with 2nd/lambda", abs(npk - expect) <= 1.5, f"{npk} vs {expect:.1f}", "|dN| <= 1.5")
     n_model = S["ir"]["membranes"][1000]["n_mid"]
-    checks.add("IR refractive index vs experiment (informational)", True, f"n = {n_model:.2f} vs {N_EXPT_IR}",
-               "IP + rigid scissor inflates eps1(0); fringe spacing is correspondingly too dense. BSE on a denser k-grid is the fix.")
-    checks.add("Lorentz-fit interband model is opaque below the gap (informational)", True,
-               f"1000 nm: sub-gap T min {S['ir']['membranes'][1000]['T_lorentz_subgap_min']:.2f}",
-               "the 0.1 eV Lorentzian tails of the inflated E0 edge leak absorption below 1.42 eV; the fit must not be used for sub-gap IR until the edge is BSE-quality")
+    checks.report("IR refractive index vs experiment (informational)", f"n = {n_model:.2f} vs {N_EXPT_IR}",
+                  "IP + rigid scissor inflates eps1(0); fringe spacing is correspondingly too dense. BSE on a denser k-grid is the fix.")
+    checks.report("Lorentz-fit interband model is opaque below the gap (informational)",
+                  f"1000 nm: sub-gap T min {S['ir']['membranes'][1000]['T_lorentz_subgap_min']:.2f}",
+                  "the 0.1 eV Lorentzian tails of the inflated E0 edge leak absorption below 1.42 eV; the fit must not be used for sub-gap IR until the edge is BSE-quality")
 
     # ------------------------------------------------------------------ 5. multilayer
     stage("5. Transfer matrix: 1 um GaAs / 125 um Kapton / 1 um GaAs (Fig. 6)")
@@ -266,7 +266,7 @@ def main() -> int:
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
     (RES / "RESULTS.md").write_text(results_md(S, checks))
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 
@@ -274,6 +274,7 @@ def results_md(S, checks) -> str:
     p = S["provenance"]
     L = [f"# Example 2 results: GaAs membrane EMI shielding ({p['date']})", "",
          f"rainbow-connection {p['rainbow_connection_commit']}, {p['hardware']}, macOS {p['macos']}, load1 {p['load1_at_start']:.2f}", "",
+         checks.summary(), "",
          "## Checks", "", checks.markdown(), "", "## Numbers", "",
          f"- Yambo IP-RPA + scissor {S['scissor_eV']:.3f} eV (PBE direct gap {S['pbe_direct_gap_eV']:.3f} -> 1.42 eV): "
          f"eps1(0) = {S['epsilon']['eps1_0']:.2f} (expt 10.9), eps2 peaks at {[round(x, 2) for x in S['epsilon']['peaks_eV']]} eV (expt E0 1.42, E1 2.9, E2 4.7)",

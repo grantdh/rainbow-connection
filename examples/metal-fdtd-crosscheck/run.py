@@ -170,33 +170,33 @@ def main() -> int:
         S[key]["mode_errors_pct"] = [round(e * 100, 2) for e in errs]
     p = pairs.get("loopfdtd_empty_vs_meep_empty")
     if p:
-        checks.add("LoopFDTD vs MEEP, empty box: mode weights (informational)", True, f"rms {p['norm_spectrum_rms']:.3f}",
-                   "not gated: the Swift programs add s(t) to Ez (soft E source) while MEEP drives a current sheet, so the same modes carry different weights")
+        checks.report("LoopFDTD vs MEEP, empty box: mode weights (informational)", f"rms {p['norm_spectrum_rms']:.3f}",
+                      "not gated: the Swift programs add s(t) to Ez (soft E source) while MEEP drives a current sheet, so the same modes carry different weights")
     p = pairs.get("loopfdtd_fixed_vs_meep_fixed")
     if p:
-        checks.add("LoopFDTD (gap fixed) vs MEEP dipole (informational)", True,
-                   f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}",
-                   "reported, not gated: a 5-cell PEC rod is defined cell-wise in Swift and Yee-position-wise in MEEP (half-cell shape ambiguity)")
+        checks.report("LoopFDTD (gap fixed) vs MEEP dipole (informational)",
+                      f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}",
+                      "reported, not gated: a 5-cell PEC rod is defined cell-wise in Swift and Yee-position-wise in MEEP (half-cell shape ambiguity)")
     p = pairs.get("loopfdtd_shipped_vs_meep_shipped")
     if p:
-        checks.add("LoopFDTD (as shipped) vs MEEP with the same closed rod (informational)", True,
-                   f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}", "reported, not gated")
+        checks.report("LoopFDTD (as shipped) vs MEEP with the same closed rod (informational)",
+                      f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}", "reported, not gated")
     p = pairs.get("meephistopheles_fixed_vs_meep_fixed")
     if p:
-        checks.add("MEEPhistopheles (3-field model) vs MEEP (informational)", True,
-                   f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}", "reported, not gated")
+        checks.report("MEEPhistopheles (3-field model) vs MEEP (informational)",
+                      f"peaks {p['peak_rel_mismatch_max'] * 100:.1f}%, rms {p['norm_spectrum_rms']:.3f}", "reported, not gated")
 
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
     (RES / "RESULTS.md").write_text(results_md(S, checks))
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 
 def results_md(S, checks) -> str:
     p = S["provenance"]
     L = [f"# Example 3 results: Metal FDTD cross-check ({p['date']})", "",
-         f"{p['hardware']}, macOS {p['macos']}, load1 {p['load1_at_start']:.2f}", "", "## Checks", "", checks.markdown(), ""]
+         f"{p['hardware']}, macOS {p['macos']}, load1 {p['load1_at_start']:.2f}", "", checks.summary(), "", "## Checks", "", checks.markdown(), ""]
     if "validation" in S:
         L += ["## LoopFDTD validation suite", "", f"{S['validation']['summary']} ({S['validation']['wall_s']:.0f} s)", "", "```"] + S["validation"]["lines"] + ["```", ""]
     L += ["## Dipole in a PEC box", "", "| engine | variant | fields | PEC cells | throughput (Mcells/s) | wall (s) | resonances (MHz) |", "|---|---|---|---|---|---|---|"]

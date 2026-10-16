@@ -47,7 +47,9 @@ sharp tests.
 
 ## Results
 
-All checks pass (2026-10-15, ~1 min): f-sum 1.123 / 1.154 / 1.169 / 1.169 of (hbar wp)^2 for 10 / 20 / 40
+15 gated checks pass, 0 fail, 2 reported (2026-10-15, ~1 min; the p/m-only f-sum and the [r,Vnl] flag are
+filed with `checks.report()`, listed as PASS in the `results/RESULTS.md` on disk and printed as REPORTED by
+the next run): f-sum 1.123 / 1.154 / 1.169 / 1.169 of (hbar wp)^2 for 10 / 20 / 40
 / 80 bands (control without [r,Vnl]: 1.387); eps1(0) - 1 = 23.518 vs (2/pi) Int eps2/w = 23.509; plasmon
 17.99 eV (hbar wp 16.6, experiment 16.7); loss file equals -Im(1/eps) to 8e-6 of the peak; Yambo's
 indirect and direct gaps equal QE's to < 0.1 meV. See `results/RESULTS.md`.

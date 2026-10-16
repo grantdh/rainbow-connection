@@ -248,21 +248,49 @@ def airy_tra(eps: np.ndarray, thickness_nm: float, energy_eV: np.ndarray) -> dic
 # --------------------------------------------------------------------------- reporting
 
 class Checks:
+    """Gated checks (PASS/FAIL, counted) and reported rows (REPORTED: a number the reader should see,
+    with its explanation in the note; never counted and never able to fail)."""
+
     def __init__(self):
         self.rows: list[dict] = []
 
     def add(self, name: str, passed: bool, value, criterion: str):
-        self.rows.append({"check": name, "pass": bool(passed), "value": value, "criterion": criterion})
+        self.rows.append({"check": name, "pass": bool(passed), "value": value, "criterion": criterion, "status": "PASS" if passed else "FAIL"})
         print(f"  [{'PASS' if passed else 'FAIL'}] {name}: {value}  ({criterion})")
+
+    def report(self, name: str, value, note: str):
+        """A reported row: not a gate. Use it for findings, controls that explain a restated gate, and
+        informational numbers; it is excluded from all_pass and from the pass count."""
+        self.rows.append({"check": name, "pass": None, "value": value, "criterion": note, "status": "REPORTED"})
+        print(f"  [REPORTED] {name}: {value}  ({note})")
+
+    @property
+    def gated(self) -> list[dict]:
+        return [r for r in self.rows if r["status"] != "REPORTED"]
+
+    @property
+    def n_pass(self) -> int:
+        return sum(1 for r in self.gated if r["pass"])
+
+    @property
+    def n_fail(self) -> int:
+        return sum(1 for r in self.gated if not r["pass"])
+
+    @property
+    def n_reported(self) -> int:
+        return len(self.rows) - len(self.gated)
 
     @property
     def all_pass(self) -> bool:
-        return all(r["pass"] for r in self.rows)
+        return all(r["pass"] for r in self.gated)
+
+    def summary(self) -> str:
+        return f"{self.n_pass} gated checks pass, {self.n_fail} fail, {self.n_reported} reported"
 
     def markdown(self) -> str:
         lines = ["| check | result | value | criterion |", "|---|---|---|---|"]
         for r in self.rows:
-            lines.append(f"| {r['check']} | {'PASS' if r['pass'] else 'FAIL'} | {r['value']} | {r['criterion']} |")
+            lines.append(f"| {r['check']} | {r['status']} | {r['value']} | {r['criterion']} |")
         return "\n".join(lines)
 
 

@@ -212,7 +212,7 @@ def main() -> int:
     checks.add("indirect PBE gap vs known value", 0.50 < gap_ind < 0.72, f"{gap_ind:.3f} eV", "0.50-0.72 eV (PBE ~0.61 at a_exp; expt 1.17)")
     checks.add("CBM sits on the Delta line near 0.85 X", 0.78 <= x_min <= 0.92, f"x = {x_min:.3f}", "0.78-0.92 of Gamma-X")
     checks.add("direct gap at Gamma vs known value", 2.45 < gap_dir < 2.67, f"{gap_dir:.3f} eV", "2.45-2.67 eV (PBE ~2.56; expt 3.4)")
-    checks.add("L1c above the VBM (informational)", True, f"{l1c:.3f} eV", "PBE ~1.5 eV; expt ~2.0 eV")
+    checks.report("L1c above the VBM (informational)", f"{l1c:.3f} eV", "PBE ~1.5 eV; expt ~2.0 eV")
     S["bands"] = {"a_bohr": A_EXP_BOHR, "vbm_eV": vbm, "cbm_x": x_min, "gap_indirect_eV": gap_ind, "gap_direct_gamma_eV": gap_dir,
                   "L1c_eV": l1c, "X1c_eV": ev[(1.0, 0.0, 0.0)][4] - vbm, "delta_line": delta_cb, "gamma": G, "L": Lp}
 
@@ -238,7 +238,7 @@ def main() -> int:
     S["checks"] = checks.rows; S["all_pass"] = checks.all_pass; S["total_wall_s"] = time.time() - t0
     exlib.dump_json(RES / "summary.json", S)
     (RES / "RESULTS.md").write_text(results_md(S, checks))
-    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
+    print(f"\n{'ALL CHECKS PASSED' if checks.all_pass else 'SOME CHECKS FAILED'} ({checks.summary()}) in {S['total_wall_s']:.0f}s -> {RES / 'RESULTS.md'}")
     return 0 if checks.all_pass else 1
 
 
@@ -246,7 +246,7 @@ def results_md(S, checks):
     p = S["provenance"]; e = S["eos"]["fit_ref"]; b = S["bands"]
     L = [f"# Example 4 results: Si equation of state and bands ({p['date']})", "",
          f"rainbow-connection {p['rainbow_connection_commit']}, {p['hardware']}, reference pw.x {p['pw_x_reference']} ({p['pw_x_reference_ab_symbols']} apple-bottom symbols), "
-         f"ecutwfc {S['ecutwfc']} / ecutrho {S['ecutrho']} Ry, {S['kmesh']}, load1 {p['load1_at_start']:.2f}", "", "## Checks", "", checks.markdown(), "",
+         f"ecutwfc {S['ecutwfc']} / ecutrho {S['ecutrho']} Ry, {S['kmesh']}, load1 {p['load1_at_start']:.2f}", "", checks.summary(), "", "## Checks", "", checks.markdown(), "",
          "## Numbers", "", "| quantity | this run | literature PBE | experiment |", "|---|---|---|---|",
          f"| a0 (A) | {e['a0_A']:.4f} | 5.469 (HTB 2009); 5.4695 (AE Delta-test) | 5.431 |", f"| B0 (GPa) | {e['B0_GPa']:.1f} | 89.2 (Csonka 2009); 88.5 (AE Delta-test) | 99.2 |", f"| B0' | {e['Bp']:.2f} | 4.31 (AE Delta-test) | ~4.1 |",
          f"| indirect gap at a_exp (eV) | {b['gap_indirect_eV']:.3f} | ~0.61 | 1.17 |", f"| CBM position on Gamma-X | {b['cbm_x']:.3f} | ~0.85 | ~0.85 |",
