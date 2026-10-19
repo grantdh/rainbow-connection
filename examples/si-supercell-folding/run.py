@@ -98,6 +98,9 @@ A_CONV = 10.2                                       # bohr, conventional cube (t
 ECUT = 25.0
 ECUTRHO = 100.0
 NBND_SMALL, NBND_64 = 24, 160
+NBND_CONTROL = 168                                  # R6 control: completes the near-degenerate group that nbnd = 160 cuts at k = (0,-1/2,-1/2)
+UPSTREAM_BIN = Path(os.environ.get("MUPPET_QE_DEVELOP_UPSTREAM", str(Path.home() / "qe-test/q-e-develop-20261018/bin-variants/pw.x.upstream")))
+UPSTREAM_DESC = "QE develop 4a626b7ce (v.8.0dev), upstream OpenBLAS, built from one fresh checkout with the mpi-gpu-ab-o3 configuration (bin-variants/PROVENANCE.txt)"
 CONV_SMALL, CONV_64 = "1.0d-10", "1.0d-9"
 EV_TOL = 1e-3                                       # eV, unfolding
 PRINT_EV = 1e-4                                     # eV, printed precision of pw.x eigenvalues
@@ -390,6 +393,58 @@ def rnd(x, nd=8):
 
 # --------------------------------------------------------------------------- running through abrun
 
+def run_nbnd_control(args, inputs_dir):
+    """R6 with nbnd = 168 on the fresh-develop upstream pw.x (the one-tree control build), 1 rank, OMP/OpenBLAS/vecLib threads 1,
+    under machlock bench: the closure of the c_bands attribution (the lagging states are the group that nbnd = 160 cuts).
+    Launched through exlib.run because the binary is not in abrun's catalog; under --reuse the record is reloaded only when the
+    binary sha256 and the rewritten input sha256 match. Returns a dict (with the output text under 'out'), or {'skipped': why}."""
+    d = RES / "ctl" / "R6n168"
+    d.mkdir(parents=True, exist_ok=True)
+    src = pw_input("si64k", 1, 2 * A_CONV, positions64(), NBND_CONTROL, k_auto(2), CONV_64, nr=72)
+    (inputs_dir / "R6n168.in").write_text(src)
+    text = presets.rewrite_input(src)                 # outdir ./tmp, pseudo_dir ./pseudo, as abrun does for the other legs
+    in_sha = presets.sha256_text(text)
+    meta_p = d / "control.json"
+    if not UPSTREAM_BIN.is_file():
+        return {"skipped": f"control binary not present: {UPSTREAM_BIN} (set MUPPET_QE_DEVELOP_UPSTREAM)"}
+    bsha = sha256(UPSTREAM_BIN)
+    if args.reuse and meta_p.exists() and (d / "out.txt").exists():
+        meta = json.loads(meta_p.read_text()); out = (d / "out.txt").read_text(errors="replace")
+        if meta.get("binary_sha256") == bsha and meta.get("input_sha256") == in_sha and "JOB DONE" in out:
+            print(f"  [reuse] R6n168: E = {meta.get('energy_Ry')} Ry; binary sha256 {bsha[:12]}, input sha256 {in_sha[:12]} (results/ctl/R6n168)")
+            meta["out"] = out
+            return meta
+    if args.no_launch:
+        return {"skipped": "--no-launch: no reusable control record in results/ctl/R6n168"}
+    (d / "input.in").write_text(text)
+    pd = d / "pseudo"; pd.mkdir(exist_ok=True)
+    upf = (RES / "pseudo" / UPF_NAME) if (RES / "pseudo" / UPF_NAME).exists() else (SI64_INPUTS / UPF_NAME)
+    link = pd / UPF_NAME
+    if link.exists() or link.is_symlink():
+        link.unlink()
+    link.symlink_to(upf.resolve())
+    shutil.rmtree(d / "tmp", ignore_errors=True)
+    env = {"OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "VECLIB_MAXIMUM_THREADS": "1"}
+    cmd = [str(launch.MPIRUN), "-np", "1"] + [x for k, v in env.items() for x in ("-x", f"{k}={v}")] + [str(UPSTREAM_BIN), "-in", "input.in"]
+    share = os.environ.pop("MUPPET_SHARE", None)       # the control takes machlock bench (exlib.run's default), as the audit session asked
+    load0 = exlib.load1()
+    t0 = time.time()
+    try:
+        rc, wall, out = exlib.run(cmd, d, d / "out.txt", env=env, label="si-supercell-folding R6n168 control (develop upstream, 1 rank, bench)", timeout=7200)
+    finally:
+        if share is not None:
+            os.environ["MUPPET_SHARE"] = share
+    shutil.rmtree(d / "tmp", ignore_errors=True)
+    pw = exlib.parse_pw(out)
+    meta = {"binary": str(UPSTREAM_BIN), "binary_desc": UPSTREAM_DESC, "binary_sha256": bsha, "input_sha256": in_sha, "nbnd": NBND_CONTROL, "rc": rc,
+            "wall_s": wall, "driver_wall_s": time.time() - t0, "load1_at_start": load0, "lock": "machlock bench", "ranks": 1,
+            "energy_Ry": pw.get("total_energy_Ry"), "iterations": pw.get("scf_iterations"), "qe_wall": pw.get("wall_time")}
+    meta_p.write_text(json.dumps(meta, indent=1))
+    print(f"  [R6n168] rc {rc}, E = {meta['energy_Ry']} Ry, {meta['iterations']} iterations, wall {wall:.0f} s (observation; machlock bench, load1 {load0:.2f} at start)")
+    meta["out"] = out
+    return meta
+
+
 class Legs:
     """All solver launches of this example; each returns abrun's run record (run.json as a dict)."""
 
@@ -512,6 +567,7 @@ def main() -> int:
     ap.add_argument("--skip-ab", action="store_true", help="reference legs only")
     ap.add_argument("--reuse", action="store_true", help="keep finished legs whose input, mode, binary id + sha256 (+ dylib sha256), pseudo sha256, ranks and nk match")
     ap.add_argument("--no-launch", action="store_true", help="refuse to launch any solver: every leg must be reusable (re-evaluate the gates from the run records)")
+    ap.add_argument("--skip-nbnd-control", action="store_true", help="skip the R6 nbnd = 168 control on the fresh-develop upstream pw.x")
     args = ap.parse_args()
     if args.no_launch and not args.reuse:
         ap.error("--no-launch needs --reuse")
@@ -606,6 +662,16 @@ def main() -> int:
     else:
         stage("S2. apple-bottom legs skipped (--skip-ab)")
 
+    # ---------------------------------------------------------------- S2b nbnd control
+    if args.skip_nbnd_control:
+        stage("S2b. nbnd = 168 control skipped (--skip-nbnd-control)"); ctl168 = None
+    else:
+        stage(f"S2b. nbnd = {NBND_CONTROL} control: R6 on the fresh-develop upstream pw.x ({UPSTREAM_BIN.name}, 1 rank, machlock bench)")
+        ctl168 = run_nbnd_control(args, inputs_dir)
+        if ctl168.get("skipped"):
+            print(f"  skipped: {ctl168['skipped']}")
+    S["control_nbnd168"] = {k: v for k, v in (ctl168 or {}).items() if k != "out"} or None
+
     # ---------------------------------------------------------------- S3/S4 gates
     stage("S3. Gates")
     R = legs.records
@@ -665,6 +731,39 @@ def main() -> int:
                    "only pool 0 (Gamma) prints, which hides it (reordering the k-points brings it back; nbnd = 168 gives a clean final iteration). The patch, the BLAS library and GPU "
                    "numerics have no effect. Energy, forces and stress parity are gated separately below")
         S["c_bands"] = {leg: {"final_warning": cbw[leg], "sequence": R[leg]["_extra"]["c_bands_seq"], "ethr_final": R[leg]["_extra"]["ethr_final"]} for leg in rows}
+    # nbnd = 168 control (closure of the attribution): the same R6 at 1 rank with the near-degenerate group complete
+    if ctl168 and not ctl168.get("skipped"):
+        ex = parse_extra(ctl168["out"]); seq = ex["c_bands_seq"]; last_it = ctl168["iterations"]
+        final = [sq for sq in seq if sq[0] == last_it]
+        e_ref = R["R6"]["result"]["total_energy_Ry"]; e_ctl = ctl168["energy_Ry"]
+        checks.add(f"nbnd = {NBND_CONTROL} control (fresh-develop upstream pw.x, 1 rank, machlock bench): no c_bands warning in the final SCF iteration",
+                   ctl168["rc"] == 0 and last_it is not None and not final and not ex["c_bands_final_warning"],
+                   f"rc {ctl168['rc']}; {len(seq)} warnings in iterations {sorted(set(sq[0] for sq in seq))}; final iteration {last_it}: {'none' if not final else final}; final ethr {ex['ethr_final']}",
+                   "none in the last iteration (mid-SCF warnings are benign). The expectation came from the audit session's 4-rank reordered nbnd = 168 run, where only "
+                   "pool 0 prints, so it covered one k-point; at 1 rank the warning aggregates all four k-points and names none. Kept red when it fails: the band-count "
+                   "explanation is then incomplete for the 1-rank layout (which states lag is not identified by this run)")
+        checks.add(f"nbnd = {NBND_CONTROL} control: same total energy as the 4-rank R6 at printed precision", e_ctl is not None and e_ref is not None and abs(e_ctl - e_ref) <= 1e-8 + 1e-12,
+                   f"{e_ctl} vs R6 {e_ref} Ry (dE {(e_ctl - e_ref) if (e_ctl is not None and e_ref is not None) else float('nan'):+.1e})", "|dE| <= 1e-8 Ry (one printed unit; the eight extra bands are empty)")
+        r6 = R["R6_cpu"]["_extra"] if "R6_cpu" in R else None
+        f160 = [sq for sq in r6["c_bands_seq"] if sq[0] == rows["R6_cpu"]["iters"]] if r6 else []
+        checks.report(f"nbnd = {NBND_CONTROL} vs nbnd = 160 at 1 rank: states still unconverged in the final SCF iteration",
+                      f"nbnd 160 (frozen build, cpu == gpu): {f160[0][1] if f160 else '?'} of 640 at ethr {f160[0][2] if f160 else '?'}; nbnd {NBND_CONTROL} (upstream develop): "
+                      f"{final[0][1] if final else 0} of {4 * NBND_CONTROL} at ethr {final[0][2] if final else ex['ethr_final']}; energies identical",
+                      "the count drops when the (0,-1/2,-1/2) group is completed but does not vanish at 1 rank; ethr ~1e-12 is where Davidson's residual test sits near the float64 "
+                      "floor for a 64-atom cell at conv_thr 1e-9, so the remaining states may be a threshold-floor effect rather than another cut group (not tested here)")
+        blk = [bb for bb in ex["bands"] if sorted(abs(x) for x in bb["k"]) == [0.0, 0.5, 0.5]]
+        if blk and len(blk[0]["eig"]) >= NBND_CONTROL:
+            e = blk[0]["eig"]; grp = e[156:168]
+            checks.report(f"nbnd = {NBND_CONTROL} control: the near-degenerate group that nbnd = 160 cut, at k = {blk[0]['k']} (2pi/alat)",
+                          f"bands 157-168 span {(max(grp) - min(grp)) * 1e3:.2f} meV around {float(np.mean(grp)):.4f} eV; gap to band 156 below: {(e[156] - e[155]) * 1e3:.1f} meV",
+                          "bands 157-160 were the last four of nbnd = 160 and sat inside this group; with the group complete Davidson converges it (audit session, 2026-10-18)")
+        checks.report(f"nbnd = {NBND_CONTROL} control provenance",
+                      f"{ctl168['binary']} sha256 {ctl168['binary_sha256'][:12]} ({ctl168.get('binary_desc')}); rc {ctl168['rc']}, {ctl168['iterations']} iterations, "
+                      f"wall {ctl168['wall_s']:.0f} s (observation; lock {ctl168['lock']}, load1 {ctl168['load1_at_start']:.2f} at start)",
+                      "launched by this driver through exlib.run under machlock bench (the binary is not in abrun's catalog); 7.4.1 and the frozen build are context only")
+        S.setdefault("c_bands", {})["R6n168_control"] = {"final_warning": bool(final), "sequence": seq, "ethr_final": ex["ethr_final"], "energy_Ry": e_ctl}
+    elif ctl168:
+        checks.report(f"nbnd = {NBND_CONTROL} control", ctl168["skipped"], "needs ~/qe-test/q-e-develop-20261018/bin-variants/pw.x.upstream (or MUPPET_QE_DEVELOP_UPSTREAM)")
     # FFT grids (the pitfall: the fold needs the supercell grid to be exactly twice the parent's)
     fft_ok = rows["R2"]["fft"] == [36] * 3 and rows["R3"]["fft"] == [36] * 3 and rows["R4"]["fft"] == [72] * 3 and rows["R6"]["fft"] == [72] * 3 and rows["R2p"]["fft"] == [48] * 3
     checks.add("FFT grids pinned and commensurate", fft_ok, f"R2 {rows['R2']['fft']}, R3 {rows['R3']['fft']}, R4 {rows['R4']['fft']}, R6 {rows['R6']['fft']}, R2' {rows['R2p']['fft']}, R1 {rows['R1']['fft']}, R1' {rows['R1p']['fft']}",

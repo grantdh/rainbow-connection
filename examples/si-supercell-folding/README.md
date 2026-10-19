@@ -67,6 +67,7 @@ informational numbers) are never counted and cannot fail.
 | cubic vs primitive | E(R1)/2 - E(R2)/8 is a REPORTED row with the pressure signature beside it (consistent with xc-grid aliasing: the fcc 24^3 and cubic 36^3 grids are not commensurate; the attribution is by elimination, a grid-only control at nr = 48 / ecutrho 100 was not run); gate: the discrepancy at ecutrho 200 (R1' vs R2') is smaller by >= 2x (both grids 1.5x denser per direction) |
 | Gamma trick vs complex | \|E(R4) - E(R5)\| <= 2e-8 Ry (two printed units, one per printed total; the estimated scf accuracy is below 1e-9 on both; was 1e-8 in the first pass); 160 eigenvalues equal to 1e-4 eV; only R4 prints `gamma-point specific algorithms are used`; iteration counts a REPORTED row |
 | final-iteration c_bands | reference legs: no `eigenvalues not converged` in the last SCF iteration; 1-rank legs: gated on the control only (every eigenvalue equals the reference's to 1e-4 eV, and cpu and gpu modes warn identically: same iterations, counts and ethr); the warning itself is a band-count and rank-layout artefact (see finding 5) |
+| nbnd = 168 control | R6 with nbnd 168 on the fresh-develop upstream pw.x (QE develop 4a626b7ce, OpenBLAS, one-tree control build; 1 rank, threads 1, machlock bench): no `c_bands` warning in the final SCF iteration, and the same total energy as R6 to 1e-8 Ry; the k = (0,-1/2,-1/2) band group 157-168 is reported. Launched through `exlib.run` (the binary is not in abrun's catalog); `--skip-nbnd-control` skips it, and it is reported as skipped when the binary is absent |
 | symmetry | forces: the Td-site atoms (R1 both atoms; R2/R3 the 4 and R4-R6 the 8 atoms at (i/2, j/2, k/2)) are exactly zero as printed (fixed by every operation QE keeps); the other atoms' symmetry-allowed residuals ([111]-type on the C3v sites of sublattice 2, in a mirror plane on the Cs face-centre sites, since QE drops the fractional translations on a supercell) <= max(QE's printed `Total SCF correction`, 5e-7) Ry/bohr, a convergence check, with QE's `SCF correction compared to forces is large` warning reported; stress isotropic to 0.01 kbar (a symmetrization consistency check: QE's symmatrix makes the printed tensor isotropic by construction); pressure equal across fold pairs to 0.05 kbar; R1 `48 Sym. Ops., with inversion` and 32 k-points as given; R2/R4/R6 `This is a supercell`, `24 Sym. Ops. (no inversion)`; R2 and R6 report 4 k-points |
 | recorded energies | \|E(R4) + 2989.94060060\| and \|E(R6) + 2990.44093535\| < 2e-6 Ry, all recorded at conv_thr 1e-6. R4: QE 7.4.1 (`~/qe-test/baseline/si64.out`, 2026-03-22) and two builds, -O0 and -O3, of QE develop 5b7f8e1bc at 1 and 8 ranks (apple-bottom `benchmarks/results/2026-10-14-1dbdb52-qe-si64` and `2026-10-15-c5a1fa6-qe-si64-opt`): -2989.94060060 three times, -2989.94060129 at 8 ranks. R6: the two develop builds only, -2990.44093535 twice and -2990.44093534 at 8 ranks / nk 4; no 7.4.1 value exists |
 | apple-bottom parity | same frozen pw.x: \|E_cpu - E_gpu\| < 1e-8 Ry, eigenvalues to 1e-4 eV, forces and stress to printed precision; cross-build \|E_abcpu - E_ref\| < 1e-6 Ry (two meanings of "CPU only", labelled; the abrun compare tables use the same 1e-6) |
@@ -89,7 +90,7 @@ sha256 e70ae3ba77a7, 0 `_ab_` symbols), `mpirun -np 4`, `-nk 4` for R3/R6. apple
 `results/RESULTS.md` is regenerated from those run records with `--reuse --no-launch` (log
 `results/run-reuse.log`; every leg reused on its sha-checked record, none relaunched); its header states the
 regeneration time, the run-record range and the sha256 of `run.py` and of `tools/abrun/*.py`, because the git
-commit it names does not contain them. **77 gated checks pass, 0 fail, 6 reported** (`Checks.summary()`).
+commit it names does not contain them. **78 gated checks pass, 1 fail, 9 reported** (`Checks.summary()`).
 
 How the gates got here. The first pass (`results/run-first-pass.log`) had 16 red rows: 3 were a parser defect
 (the `(no inversion)` note kept its parentheses) and 13 were assumptions the controls below refuted. The second
@@ -198,9 +199,16 @@ agree to 1.1e-9 Ry/atom (7.8177 mRy/atom; campaign 7.8).
    157-168 lie at 9.5080-9.5081 eV, so nbnd = 160 cuts a near-degenerate group and a few of its states lag;
    with -nk 4 only pool 0 (Gamma) prints (Modules/environment.f90), which is why the 4-rank legs show no
    final-iteration warning (reordering the k-points so that (0,-1/2,-1/2) lands in pool 0 brings it back;
-   nbnd = 168 gives a clean final iteration with the same energy). The 7.4.1 reference is context only and
-   attributes nothing. Every eigenvalue equals the reference's to the printed 0.1 meV, and energy, forces
-   and stress are identical (gated in the parity rows).
+   nbnd = 168 gave a clean final iteration with the same energy in that 4-rank, pool-0-only run). The 7.4.1
+   reference is context only and attributes nothing. Every eigenvalue equals the reference's to the printed
+   0.1 meV, and energy, forces and stress are identical (gated in the parity rows).
+   *The nbnd = 168 control in this example (2026-10-19, pw.x.upstream cd7b31b8, 1 rank, machlock bench) did
+   not close it:* the energy is identical (-2990.44093548 Ry) and the (0,-1/2,-1/2) group is complete
+   (bands 157-168 span 0.10 meV, 469 meV above band 156), but the final iteration still reports 2 of 672
+   eigenvalues unconverged at ethr 7.3e-13 (4 of 640 at nbnd 160). At 1 rank the c_bands line aggregates all
+   four k-points and names none, so the band-count explanation is incomplete for that layout; the gate is
+   kept red. Untested candidates: another group cut at a different k-point, or a threshold-floor effect
+   (ethr ~1e-12 at conv_thr 1e-9 on 64 atoms; a conv_thr 1e-8 run would separate them).
 6. *Forces on the ideal lattice are not zero on every atom, and QE says so.* Under the 24 point operations
    QE keeps on a supercell (fractional translations disabled), only the atoms at (i/2, j/2, k/2) have Td site
    symmetry; the sublattice-2 atoms have C3v and the face-centre atoms Cs, so [111]-type and in-plane
