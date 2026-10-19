@@ -152,7 +152,9 @@ agree to 1.1e-9 Ry/atom (7.8177 mRy/atom; campaign 7.8).
    lowers alpha from 2.9 in steps of 0.1 until its G-sum error bound 2 Q^2 sqrt(2 alpha/2pi)
    erfc(sqrt(ecutrho/4 alpha)) is <= 1e-7 Ry (Q = total ionic charge, so 1.1 on the 8-atom cell and 0.9 on
    the 64-atom cells), sums G over the ecutrho sphere, and sums real space over pairs with
-   r <= rmax = 4/sqrt(alpha) (`rgen`; the source comment says "terms up to ZiZj*erfc(4) are counted"). On the
+   r <= rmax = 4/sqrt(alpha) (`rgen`; the source comment says "terms up to ZiZj*erfc(4) are counted"; the
+   stress routine `stres_ewa.f90` keeps terms to erfc(5)). That cutoff is a documented tolerance of the routine,
+   not a defect: it is what the example quantifies and closes, and the gated identity avoids it. On the
    64-atom cells rmax = 4.216 bohr is below the nearest-neighbour distance 4.417 bohr, so the four nearest
    neighbours of every atom are dropped: erfc(sqrt(0.9) x 4.417) x 16/4.417 x 4 = 4.5e-8 Ry/atom, 2.9e-6 Ry
    per cell. The 8-atom cells also have rmax (3.81 bohr) below d_nn, but at alpha 1.1 the dropped shell is
