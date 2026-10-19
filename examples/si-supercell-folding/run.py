@@ -639,9 +639,12 @@ def main() -> int:
                + ", ".join(f"{l} {R[l]['_extra']['ethr_final']}" for l in ("R4", "R6") if l in rows),
                "none in the last iteration (mid-SCF ones are benign: Davidson tightens ethr as the density converges and reports the states that lag at that iteration)")
     if frz_legs:
-        # finding about the frozen build, gated on its control only: the warned run's eigenvalues equal the reference leg's to the printed
-        # precision, and cpu and gpu modes warn identically. The control rules out GPU numerics and nothing else: the reference differs from
-        # the frozen build in QE version, Davidson patch, rank layout and BLAS vendor at once, so the cause is not isolated.
+        # The warning is a band-count and rank-layout artefact, not a build property. Attribution (apple-bottom audit session, 2026-10-18,
+        # one fresh develop checkout 4a626b7ce built three ways: upstream/OpenBLAS, + ab-frozen 33fbaa8c8944, + the cegterg/regterg patch;
+        # R6 at 1 rank in cpu and gpu): all four agree in every SCF iteration, warning sequence, eigenvalue, force and stress, so the patch,
+        # the BLAS library and GPU numerics have no effect. At k = (0,-1/2,-1/2) bands 157-168 sit at 9.5080-9.5081 eV, so nbnd = 160 cuts a
+        # near-degenerate group; with -nk 4 only pool 0 (Gamma) prints (Modules/environment.f90), which hides the warning; nbnd = 168 gives a
+        # clean final iteration. Here the gate is the control: eigenvalues equal the reference leg's and cpu == gpu warn identically.
         warned, ctl, ctl_ok = [l for l in frz_legs if cbw[l]], [], True
         for leg in warned:
             name = R[leg]["_name"]
@@ -653,13 +656,14 @@ def main() -> int:
                        f"(warned in iterations {sorted(set(s[0] for s in seq))}); max |delta eig| vs {name} {d*1e3:.1f} meV")
         same = {f"{a}/{b}": R[a]["_extra"]["c_bands_seq"] == R[b]["_extra"]["c_bands_seq"] for a, b in (("R4_cpu", "R4_gpu"), ("R6_cpu", "R6_gpu")) if a in rows and b in rows}
         ctl_ok = ctl_ok and all(same.values())
-        checks.add("frozen build: final-iteration c_bands warning (finding; gated on its control, cause not isolated)", ctl_ok,
+        checks.add("final-iteration c_bands warning at 1 rank (nbnd = 160 cuts a near-degenerate group; hidden at 4 ranks by pool-0-only printing); gated on its control", ctl_ok,
                    (("; ".join(ctl) + f"; warning sequence (iteration, count, ethr) identical cpu vs gpu: {same}; reference R6 (QE 7.4.1, OpenBLAS, 4 ranks) final ethr {R['R6']['_extra']['ethr_final']}, "
                      f"warned in iterations {sorted(set(s[0] for s in R['R6']['_extra']['c_bands_seq']))} only") if warned else f"no final-iteration warning in {frz_legs}; cpu vs gpu sequences identical: {same}"),
-                   "control (the gate): every printed eigenvalue equals the reference's to 1e-4 eV and cpu and gpu modes warn identically (same iterations, counts and ethr). Finding: a few "
-                   "eigenvalues not converged at the final ethr ~1e-12 on the frozen build (QE develop 7.5 + patched cegterg/regterg, Accelerate GEMMs) at 1 rank, identical in cpu and gpu "
-                   "modes, while the 7.4.1 / OpenBLAS / 4-rank reference did not warn in its final iteration; cause not isolated (patched cegterg/regterg, QE develop, 1-rank layout, BLAS "
-                   "vendor untested; the control rules out GPU numerics only). Energy, forces and stress parity are gated separately below")
+                   "control (the gate): every printed eigenvalue equals the reference's to 1e-4 eV and cpu and gpu modes warn identically (same iterations, counts and ethr). Cause "
+                   "(attributed on 2026-10-18 from one fresh QE develop checkout 4a626b7ce built upstream / + apple-bottom / + cegterg patch, R6 at 1 rank, cpu and gpu: all identical): at "
+                   "k = (0,-1/2,-1/2) bands 157-168 lie within 0.1 meV at 9.508 eV, so nbnd = 160 splits a near-degenerate group and a few of its states lag at ethr ~1e-12; with -nk 4 "
+                   "only pool 0 (Gamma) prints, which hides it (reordering the k-points brings it back; nbnd = 168 gives a clean final iteration). The patch, the BLAS library and GPU "
+                   "numerics have no effect. Energy, forces and stress parity are gated separately below")
         S["c_bands"] = {leg: {"final_warning": cbw[leg], "sequence": R[leg]["_extra"]["c_bands_seq"], "ethr_final": R[leg]["_extra"]["ethr_final"]} for leg in rows}
     # FFT grids (the pitfall: the fold needs the supercell grid to be exactly twice the parent's)
     fft_ok = rows["R2"]["fft"] == [36] * 3 and rows["R3"]["fft"] == [36] * 3 and rows["R4"]["fft"] == [72] * 3 and rows["R6"]["fft"] == [72] * 3 and rows["R2p"]["fft"] == [48] * 3
