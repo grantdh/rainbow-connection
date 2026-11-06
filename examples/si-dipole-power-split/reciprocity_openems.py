@@ -27,7 +27,7 @@ STACK = c.device()["stack"]
 
 def done(which):
     res = c.WF / "results" / f"ps_recip_{which}"
-    return (res / "sim/Ecol.h5").exists() if which == 0 else (res / "port2.npz").exists()
+    return (res / "sim/port_ut_1").exists() and (res / ("sim/Ecol.h5" if which == 0 else "port2.npz")).exists()
 
 
 def run(which):
