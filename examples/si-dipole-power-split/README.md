@@ -59,5 +59,9 @@ state. The results are kept in the private repository because they contain the m
   Wannier Hamiltonian and from EPW's fine grid. omega tau is small at these frequencies, so the dynamic part is a check rather than a correction.
 - **Sum heat on the Yee edges, not at cell centres.** J E times an edge's whole dual volume is that edge's G V^2. Cell-centred dumps average across the oxide/handle face and the pad edges and overcounted the
   heat by 5 %, most of it spuriously in the membrane. The raw edge sum closes the energy balance to under 1 %.
+- **openEMS reruns stop where the machine's load lets them.** Its end criterion is tested on a wall-clock interval, so a run that stops on it stops at a
+  load-dependent step: two runs of the same input stopped at 46158 and 43549 steps and differed by about 1e-4 in Y. That is far below u_num, but enough to fail a
+  bit-level reproduction check. Each run that stopped on the criterion has its step stored in `out/openems_stop_steps.json` (with a hash of its arguments), and a rerun
+  replays exactly that many steps, which reproduces it bit for bit. Runs that reach `--max-ts` and Palace (to 1e-12) reproduce without help.
 - **Palace's domain energy gives Joule heat directly:** P = 2 (sigma/eps) E_elec for a uniform lossy domain, which closes the balance without a separate field integral. Its phasors are RMS-normalised, so its
   power flux Re{E x H*} has no factor 1/2. Missing that made the FEM radiated fraction look 1.8x the FDTD one.

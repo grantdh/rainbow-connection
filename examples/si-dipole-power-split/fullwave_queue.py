@@ -23,10 +23,11 @@ def main():
             continue
         res = c.WF / "results" / name
         if not ((res / "port_at_dump.npz").exists() and (res / "sim/Evol.h5").exists()):
-            rc = c.run_solver([PY, c.HERE / "fullwave_openems.py", "run", *RUNS[name], "--tag", name], c.HERE, logs / f"{name}.log", lock="yield")
+            rc = c.run_solver([PY, c.HERE / "fullwave_openems.py", "run", *c.replay(RUNS[name], name)], c.HERE, logs / f"{name}.log", lock="yield")
             print(name, "run rc", rc, flush=True)
             if rc != 0:
                 continue
+            c.record_stop(RUNS[name], name, logs / f"{name}.log")
         rc = c.run_solver([PY, c.HERE / "fullwave_openems.py", "analyse", "--tag", name], c.HERE, logs / f"{name}.analysis", lock=None)
         print(name, "analyse rc", rc, flush=True)
         print(open(logs / f"{name}.analysis").read(), flush=True)

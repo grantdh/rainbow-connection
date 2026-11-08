@@ -26,6 +26,7 @@ WF = NM / "workflows/nm-meander-dipole"
 PS = WF / "power-split"
 PREREG = PS / "prereg"
 OUT = PS / "out"
+STOPS = OUT / "openems_stop_steps.json"     # written by the runs, committed with their results
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "common"))
 from exlib import MACHLOCK, TIMING_LOCK  # noqa: E402
@@ -46,6 +47,27 @@ def inputs():
 def device():
     require_private_repo()
     return json.load(open(PS / "device.json"))
+
+
+def _argv_key(argv):
+    return hashlib.sha256(json.dumps([str(a) for a in argv]).encode()).hexdigest()[:12]
+
+
+def replay(argv, tag):
+    """openEMS argv for one run. openEMS tests its end criterion on a wall-clock interval, so where a run stops depends on machine load. A run that stopped on
+    the criterion has its step recorded (record_stop); with the same arguments it is replayed for exactly that many steps, which reproduces it bit for bit."""
+    rec = (json.loads(STOPS.read_text()) if STOPS.exists() else {}).get(tag)
+    extra = ["--max-ts", str(rec["steps"]), "--end-db", "-400"] if rec and rec["argv"] == _argv_key(argv) else []
+    return [*argv, *extra, "--tag", tag]
+
+
+def record_stop(argv, tag, log):
+    """After an openEMS run: store the step at which it stopped on its end criterion. A run that reaches --max-ts is deterministic already, and so is a replay."""
+    m = re.search(r"end-criteria of \S+ reached after (\d+) timesteps", Path(log).read_text(errors="ignore"))
+    if m:
+        rec = json.loads(STOPS.read_text()) if STOPS.exists() else {}
+        rec[tag] = {"steps": int(m[1]), "argv": _argv_key(argv)}
+        STOPS.write_text(json.dumps(rec, indent=1, sort_keys=True) + "\n")
 
 
 def import_private(module, sub="materials"):
@@ -178,6 +200,8 @@ def require_registered(name):
     rel = path.relative_to(NM)
     if git("status", "--porcelain", "--", str(rel)):
         sys.exit(f"{rel} is uncommitted or modified: commit the prediction before computing its comparison")
+    if git("rev-parse", "--is-shallow-repository") == "true":
+        return "shallow clone"          # the registering commit is outside this clone's history; git fetch --unshallow shows it
     sha = git("log", "-1", "--format=%h", "--", str(rel))
     if not sha:
         sys.exit(f"{rel} has never been committed")

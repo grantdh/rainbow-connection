@@ -5,6 +5,7 @@ Then the transmit field of a run without port 2 must predict Z21: reciprocity gi
 That is the statement behind Kirchhoff here: thermal currents 4 k T sigma dV at r reach the port with exactly the weight of the transmit heat map at r.
   reciprocity_openems.py run 1|2|0         one direction, or 0: the transmit field on the same mesh with no port in the handle (through the private run_meander builder)
   reciprocity_openems.py analyse           S21, S12, Z21 vs the transmit field; writes OUT/reciprocity.json
+  reciprocity_openems.py queue             the three runs that are not on disk yet (yield mode), then analyse
 """
 import json
 import sys
@@ -66,7 +67,7 @@ def run(which):
         return out
     rm.build = build
     tag = f"ps_recip_{which}"
-    sys.argv = ["run_meander.py", *BASE, "--tag", tag]
+    sys.argv = ["run_meander.py", *c.replay(BASE, tag)]
     rm.main()
     sim = c.WF / "results" / tag / "sim"
     if which == 0:
@@ -119,8 +120,14 @@ def analyse():
     print(json.dumps(out, indent=0)[:1500])
 
 
+def queue():
+    for which in (1, 2, 0):
+        if not done(which):
+            tag, log = f"ps_recip_{which}", c.OUT / f"recip{which}.log"
+            if c.run_solver([sys.executable, __file__, "run", str(which)], c.HERE, log, lock="yield") == 0:
+                c.record_stop(BASE, tag, log)
+    analyse()
+
+
 if __name__ == "__main__":
-    if sys.argv[1] == "run":
-        run(int(sys.argv[2]))
-    else:
-        analyse()
+    {"run": lambda: run(int(sys.argv[2])), "analyse": analyse, "queue": queue}[sys.argv[1]]()

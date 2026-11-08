@@ -20,22 +20,13 @@ def py(*args, python=NMPHYS):
     subprocess.run([str(python), *map(str, args)], cwd=c.HERE, check=True)
 
 
-def reciprocity():
-    import reciprocity_openems as ro
-    for which in (1, 2, 0):
-        if not ro.done(which):
-            c.run_solver([OPENEMS, c.HERE / "reciprocity_openems.py", "run", str(which)], c.HERE, c.OUT / f"recip{which}.log", lock="yield")
-    py("reciprocity_openems.py", "analyse", python=OPENEMS)
-    py("register_stages.py", "fullwave")
-
-
 STAGES = {
     "raw": lambda: py("recompute_y.py"),
     "epw": lambda: py("epw_series.py", "run"),
     "materials": lambda: py("materials_si.py"),
     "thermal": lambda: (py("thermal_closed.py"), py("thermal_elmer.py")),
     "fullwave": lambda: (py("fullwave_queue.py"), py("register_stages.py", "fullwave")),
-    "reciprocity": reciprocity,
+    "reciprocity": lambda: (py("reciprocity_openems.py", "queue", python=OPENEMS), py("register_stages.py", "fullwave")),
     "fem": lambda: (py("register_stages.py", "fem-run"), py("register_stages.py", "fem")),
     "fingerprints": lambda: py("heating.py"),
     "validate": lambda: py("validate.py"),
