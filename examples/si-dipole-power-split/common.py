@@ -2,7 +2,8 @@
 
 The device data (raw .s1p files, geometry, input values, predictions, results) stay in the private repository and are
 read by path: set NM_REPRO to its checkout (default ~/Dev/Claude/nm-antenna-reproduction). Nothing device-specific is
-written under this public directory: file names, geometry, stack values and run flags come from device.json there.
+written under this public directory: file names, geometry, stack values, run flags and record text come from device.json there,
+and the deep stage's write-ups' prose from templates/.
 """
 import datetime as dt
 import fcntl
@@ -47,6 +48,12 @@ def inputs():
 def device():
     require_private_repo()
     return json.load(open(PS / "device.json"))
+
+
+def template(name):
+    """The prose of a private write-up (templates/<name>), with str.format fields for the computed values."""
+    require_private_repo()
+    return (PS / "templates" / name).read_text()
 
 
 def _argv_key(argv):
@@ -107,10 +114,11 @@ def sample_inputs(n=20000, seed=SEED):
     return s
 
 
-def laser_power(k, amps):
-    """Output power (W) at setting k under the two endpoint laws of inputs.json."""
+def laser_power(k, amps, ith=None):
+    """Output power (W) at setting k under the two endpoint laws of inputs.json; ith overrides the amps law's threshold (A). Arrays broadcast."""
     d = device()["laser"]
-    pa = d["p_max_W"] * np.maximum(k - d["i_th_A"], 0.0) / (d["i_max_A"] - d["i_th_A"])
+    ith = d["i_th_A"] if ith is None else ith
+    pa = d["p_max_W"] * np.maximum(k - ith, 0.0) / (d["i_max_A"] - ith)
     return np.where(amps, pa, d["tenth_W_per_setting"] * k)
 
 
@@ -136,12 +144,18 @@ def raw_day(name):
     return d
 
 
-def x_timeline():
-    """[(file, setting, seconds after the dark sweep)] of the X-day series. Only the header dates are used."""
-    d = raw_day("X")
-    names = [(d["dark"], 0)] + [(d["lit"].format(k=k), k) for k in range(1, 8)] + [(d["bias"], 7), (d["after"], 0)]
+def timeline(day):
+    """[(file, setting, seconds after the dark sweep)] of a day's series, in time order. Only the header dates are used. X: dark, 1-7, the 10 V repeat of 7,
+    dark after. Ka: ambient before, dark, 1-7, ambient after (no dark after was taken)."""
+    d = raw_day(day)
+    names = [(d["dark"], 0)] + [(d["lit"].format(k=k), k) for k in range(1, 8)]
+    names += [(d["bias"], 7), (d["after"], 0)] if day == "X" else [(d["ambient"][0], 0), (d["ambient"][1], 0)]
     t0 = stamp(d["dev"] / d["dark"])
-    return [(n, k, (stamp(d["dev"] / n) - t0).total_seconds()) for n, k in names]
+    return sorted(((n, k, (stamp(d["dev"] / n) - t0).total_seconds()) for n, k in names), key=lambda r: r[2])
+
+
+def x_timeline():
+    return timeline("X")
 
 
 # ---------------------------------------------------------------------------- pre-registration

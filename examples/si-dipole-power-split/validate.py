@@ -20,6 +20,12 @@ class Table:
         u_val = float(np.sqrt(u_num**2 + u_input**2 + u_d**2))
         self.rows.append(dict(name=name, S=s, D=d, u_num=u_num, u_input=u_input, u_D=u_d, E=e, u_val=u_val, ratio=abs(e) / u_val if u_val else np.inf, ok=abs(e) <= K_RED * u_val, blind=blind, sha=sha))
 
+    def markdown(self):
+        """The V&V table as markdown rows, header first."""
+        L = ["| quantity | S | D | u_num | u_input | u_D | E | u_val | E/u_val | status | blind | prediction |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+        return L + [f"| {r['name']} | {r['S']:.4g} | {r['D']:.4g} | {r['u_num']:.2g} | {r['u_input']:.2g} | {r['u_D']:.2g} | {r['E']:+.3g} | {r['u_val']:.2g} | {r['ratio']:.2f} | "
+                    f"{'pass' if r['ok'] else 'RED'} | {'yes' if r['blind'] else 'no'} | {r['sha']} |" for r in self.rows]
+
     def gate(self, name, value, limit, note=""):
         self.gates.append(dict(name=name, value=value, limit=limit, ok=bool(abs(value) <= limit), note=note))
 
@@ -220,9 +226,7 @@ def write_results(T, fp, r_x, r_ka, u_x, u_ka, decide, verdict, m, sha, fw04, fe
     L += ["", "## Chip temperature, Elmer", ""]
     for n in c.device()["thermal_cases"]:
         L.append(f"- {n}: steady dT {th[n]['dT_mean_K']:.3g} K at setting 7 (closed form {th[n]['closed_form_dT_K']:.3g} K), 1/e cooling {th[n]['cooling_1_over_e_s']} s, P_abs {th[n]['P_abs_on_chip_W']:.3g} W")
-    L += ["", "## ASME V&V 20", "", "| quantity | S | D | u_num | u_input | u_D | E | u_val | E/u_val | status | blind | prediction |", "|---|---|---|---|---|---|---|---|---|---|---|---|"]
-    for r in T.rows:
-        L.append(f"| {r['name']} | {r['S']:.4g} | {r['D']:.4g} | {r['u_num']:.2g} | {r['u_input']:.2g} | {r['u_D']:.2g} | {r['E']:+.3g} | {r['u_val']:.2g} | {r['ratio']:.2f} | {'pass' if r['ok'] else 'RED'} | {'yes' if r['blind'] else 'no'} | {r['sha']} |")
+    L += ["", "## ASME V&V 20", ""] + T.markdown()
     L += ["", "## Identities and numerical gates", "", "| check | value | limit | status | note |", "|---|---|---|---|---|"]
     for g in T.gates:
         L.append(f"| {g['name']} | {g['value']:.3g} | {g['limit']:g} | {'pass' if g['ok'] else 'RED'} | {g['note']} |")

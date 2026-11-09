@@ -6,7 +6,8 @@ explain a superlinear turn-on seen on one measurement day and not on the other?
 
 The method is the point of this example. It starts from raw sweeps, labels every input, commits each prediction to git before
 comparing it, and leaves failures red. Its device data (raw `.s1p` files, geometry, stack values, run flags, predictions and results) are
-unpublished, so they stay in a private repository and are read by path (`device.json` and `prereg/inputs.json` there). This directory holds only code.
+unpublished, so they stay in a private repository and are read by path (`device.json`, `prereg/inputs.json` and the write-ups' prose in `templates/` there).
+This directory holds only code.
 
 ```bash
 export NM_REPRO=~/Dev/Claude/nm-antenna-reproduction     # the private repository
@@ -30,6 +31,27 @@ everything committed                ->  ASME V&V 20 table, identities, verdict  
 ```
 
 The MUPPET Studio workflow `examples/08-si-dipole-power-split.json` runs the same scripts through one node per stage.
+
+## The deeper question: what heating would need (`run.py --stage deep`)
+
+The first answer was a "no" conditional on two unrecorded inputs. The `deep` stage replaces the conditions with numbers. Rules are fixed in the private
+`prereg/00d-00g` before each prediction, and every prediction (`07-13`) is committed before it is compared.
+
+```
+flip map: H_T and H_TC on the recorded timelines, R_th x C, mu(T) EPW or Jacoboni,        flip_map.py map | threshold | linearity
+          laser laws; then along the laser threshold; then one laser for both days
+the chip resting on the chuck: gas-gap contact physics -> R_th distribution                contact.py
+time fingerprints, the GaAs controls, model evidence, the probe on the pads (a red row),   deep.py fingerprints | gaas | evidence | redrows | protocol
+and the predictions for the measurements that would settle it (PROTOCOL.md)
+the map, the comparisons, a figure                                                         validate_deep.py
+```
+
+- **Scan, don't sample, to find a flip point.** Sampling the priors only explores where they put weight. The flip map scans each unrecorded input on a grid and
+  reports where the verdict changes; the priors come back only for the evidence.
+- **Look for the hinge before refining.** Here the chuck contact was not the hinge: the setting-to-power law of the laser was. A heating-free test (the
+  response at the lowest settings) bounds it, and the second measurement day, taken with the same laser, constrains it again.
+- **Boundary-condition-free fingerprints have a reach.** A dark sweep shortly after illumination excludes slow heating whatever the mount, but heating with a
+  time constant of a second or two leaves no trace in sweeps taken tens of seconds apart. The protocol asks for the measurements that can see it.
 
 ## The rules it enforces
 

@@ -154,7 +154,9 @@ End
 
 
 def power_of_setting(k, law):
-    return float(c.laser_power(np.array(float(k)), np.array(law == "amps")))
+    """'amps', 'tenth', or 'amps_Ith<x>': the amps law with threshold x A (the same endpoint, device.json's laser)."""
+    ith = float(law[8:]) if law.startswith("amps_Ith") else None
+    return float(c.laser_power(np.array(float(k)), np.array(law.startswith("amps")), ith))
 
 
 def chain(cs, tl):
