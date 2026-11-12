@@ -114,3 +114,6 @@ data-file-schema.xml
 # Benchmarking data (keep scripts, not output)
 benchmarks/*/data/
 benchmarks/*/results/
+
+# FDTD backend runs (generated)
+lib/fdtd/runs/

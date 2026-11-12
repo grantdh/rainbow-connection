@@ -1,0 +1,74 @@
+{
+ "schema": "muppet-fdtd-case/0",
+ "dimensions": 2,
+ "grid": {
+  "n": [
+   63,
+   63
+  ],
+  "dx_m": 0.025
+ },
+ "time": {
+  "courant": 0.5715767664977295,
+  "c_m_per_s": 299792458.0,
+  "steps": 32000
+ },
+ "precision": "any",
+ "boundaries": {
+  "x-": "pec",
+  "x+": "pec",
+  "y-": "pec",
+  "y+": "pec"
+ },
+ "materials": {
+  "vacuum": {
+   "eps_r": 1.0,
+   "sigma_S_per_m": 0.0
+  }
+ },
+ "background": "vacuum",
+ "regions": [],
+ "sources": [
+  {
+   "kind": "soft_e",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30
+    ],
+    "hi": [
+     34,
+     34
+    ]
+   },
+   "amplitude_V_per_m": 0.5,
+   "waveform": {
+    "type": "gaussian_modulated",
+    "f0_Hz": 300000000.0,
+    "t0_s": 3.3333333333333334e-08,
+    "width_s": 1.6666666666666667e-09
+   }
+  }
+ ],
+ "probes": [
+  {
+   "name": "gap_ez",
+   "kind": "e_samples",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30
+    ],
+    "hi": [
+     34,
+     34
+    ]
+   },
+   "every": 1
+  }
+ ],
+ "name": "c2d-empty-pec-box-ringdown",
+ "origin": "MEEPhistopheles src/metal/dipole_s11.swift, plane k = 64. Its kernels have no z-derivatives (Ez, Hx, Hy only), so each z-plane is an independent 2-D TM problem and the recorded runs drive only the feed plane. The program runs 64 x 64 cells per plane and holds Ez at nodes 0 and 63: the (N-1) dx box. Its source is the 5 x 5 soft Ez patch at x 0.5 around (32, 32). Ring-down version (32,000 steps, envelope 0.5 periods), as examples/yee-dispersion."
+}

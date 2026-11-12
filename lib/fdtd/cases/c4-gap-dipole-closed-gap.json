@@ -1,0 +1,150 @@
+{
+ "schema": "muppet-fdtd-case/0",
+ "dimensions": 3,
+ "grid": {
+  "n": [
+   63,
+   63,
+   127
+  ],
+  "dx_m": 0.025
+ },
+ "time": {
+  "courant": 0.5715767664977295,
+  "c_m_per_s": 299792458.0,
+  "steps": 2000
+ },
+ "precision": "any",
+ "boundaries": {
+  "x-": "pec",
+  "x+": "pec",
+  "y-": "pec",
+  "y+": "pec",
+  "z-": "pec",
+  "z+": "pec"
+ },
+ "materials": {
+  "vacuum": {
+   "eps_r": 1.0,
+   "sigma_S_per_m": 0.0
+  }
+ },
+ "background": "vacuum",
+ "regions": [
+  {
+   "kind": "pec_cells",
+   "convention": "e_minus_half",
+   "indices": {
+    "lo": [
+     31,
+     32,
+     54
+    ],
+    "hi": [
+     33,
+     32,
+     74
+    ]
+   }
+  },
+  {
+   "kind": "pec_cells",
+   "convention": "e_minus_half",
+   "indices": {
+    "lo": [
+     32,
+     31,
+     54
+    ],
+    "hi": [
+     32,
+     33,
+     74
+    ]
+   }
+  }
+ ],
+ "sources": [
+  {
+   "kind": "soft_e",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30,
+     63
+    ],
+    "hi": [
+     34,
+     34,
+     63
+    ]
+   },
+   "amplitude_V_per_m": 50.0,
+   "waveform": {
+    "type": "gaussian_modulated",
+    "f0_Hz": 300000000.0,
+    "t0_s": 3.3333333333333334e-08,
+    "width_s": 1e-08
+   }
+  }
+ ],
+ "probes": [
+  {
+   "name": "gap_ez",
+   "kind": "e_samples",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30,
+     63
+    ],
+    "hi": [
+     34,
+     34,
+     63
+    ]
+   },
+   "every": 1
+  },
+  {
+   "name": "gap_hx",
+   "kind": "h_samples",
+   "component": "Hx",
+   "indices": {
+    "lo": [
+     30,
+     28,
+     63
+    ],
+    "hi": [
+     34,
+     33,
+     63
+    ]
+   },
+   "every": 1
+  },
+  {
+   "name": "gap_hy",
+   "kind": "h_samples",
+   "component": "Hy",
+   "indices": {
+    "lo": [
+     28,
+     30,
+     63
+    ],
+    "hi": [
+     33,
+     34,
+     63
+    ]
+   },
+   "every": 1
+  }
+ ],
+ "name": "c4-gap-dipole-closed-gap",
+ "origin": "examples/metal-fdtd-crosscheck, the Swift programs' problem (LoopFDTD/dipole_s11.swift, run as Nx,Ny,Nz = 64,64,128, which solve an (N-1) dx box). Indices are spec indices; the Swift e_minus_half layout is mapped in lib/fdtd/case.py. The 5x5 soft source, its x50 amplitude and the probe samples are those of the program. Variant 'as shipped': gapCells/2 = 0 closes the gap, a solid 21-cell rod."
+}
