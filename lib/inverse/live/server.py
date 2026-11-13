@@ -254,9 +254,38 @@ class Session:
 SESSION: Session
 
 
+BODY_MAX = 64 * 1024
+
+
 class Handler(BaseHTTPRequestHandler):
+    """Binding to loopback is not origin isolation: any page the user opens can POST to 127.0.0.1, and a
+    DNS-rebound name can read from it. So (as in tools/abrun/server.py) every request must carry Host
+    127.0.0.1:<port> or localhost:<port>, and a POST must be application/json with Origin absent (curl) or
+    same-origin (the page). Cross-origin forms cannot send JSON without a preflight, which is never answered."""
+
     def log_message(self, *a):
         pass
+
+    def _refused(self, post: bool) -> bool:
+        port = self.server.server_address[1]
+        allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        host = (self.headers.get("Host") or "").strip().lower()
+        if host not in allowed:
+            self._send(403, f"forbidden: Host {host!r}".encode(), "text/plain")
+            return True
+        if post:
+            ctype = (self.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+            if ctype != "application/json":
+                self._send(415, b"POST needs Content-Type: application/json", "text/plain")
+                return True
+            origin = self.headers.get("Origin")
+            if origin is not None and origin.strip().lower() not in {f"http://{h}" for h in allowed}:
+                self._send(403, b"forbidden: cross-origin request", "text/plain")
+                return True
+        return False
+
+    def do_OPTIONS(self):  # no CORS: a cross-origin preflight is refused, never answered
+        self._send(403, b"forbidden", "text/plain")
 
     def _send(self, code: int, body: bytes, ctype: str, extra: dict | None = None):
         self.send_response(code)
@@ -269,6 +298,8 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        if self._refused(post=False):
+            return
         if self.path in ("/", "/index.html"):
             self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
         elif self.path == "/events":
@@ -304,15 +335,30 @@ class Handler(BaseHTTPRequestHandler):
             self._send(404, b"not found", "text/plain")
 
     def do_POST(self):
+        if self._refused(post=True):
+            return
         if self.path not in ("/params", "/verify"):
             return self._send(404, b"not found", "text/plain")
-        n = int(self.headers.get("Content-Length", 0))
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._send(400, b"bad Content-Length", "text/plain")
+        if n > BODY_MAX:
+            return self._send(413, b"body too large", "text/plain")
         try:
             patch = json.loads(self.rfile.read(n) or b"{}")
         except json.JSONDecodeError:
             return self._send(400, b"bad json", "text/plain")
+        if not isinstance(patch, dict):
+            return self._send(400, b"body must be a JSON object", "text/plain")
         if self.path == "/verify":
-            SESSION.verify(float(patch.get("res", 50)))
+            try:
+                res = float(patch.get("res", 50))
+            except (TypeError, ValueError):
+                return self._send(400, b"res must be a number", "text/plain")
+            if not 10 <= res <= 200:
+                return self._send(400, b"res must be 10-200 px/um", "text/plain")
+            SESSION.verify(res)
         else:
             SESSION.update(patch)
         self._send(200, b'{"ok":true}', "application/json")
