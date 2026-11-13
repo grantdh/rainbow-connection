@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live Inverse Design</title>
+<style>
+:root {
+  --bg: #f6f6f4; --panel: #ffffff; --ink: #1d1f23; --muted: #6b6f78; --line: #e2e2de; --accent: #2f6fd6;
+  --good: #1d8a4e; --warn: #b8691b; --bad: #c0392b;
+  --c0: #2f6fd6; --c1: #d0582a; --c2: #2a9d6f; --c3: #8e5bd0;
+  --mid: 246,246,244; --matter: 40,42,52;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171b; --panel: #1d2025; --ink: #e7e8ea; --muted: #9298a3; --line: #2d3138; --accent: #6b9cf0;
+    --good: #45c07f; --warn: #e09a4a; --bad: #ec6b5d;
+    --c0: #6b9cf0; --c1: #ef8458; --c2: #4fc497; --c3: #b48cf0;
+    --mid: 21,23,27; --matter: 215,218,226;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171b; --panel: #1d2025; --ink: #e7e8ea; --muted: #9298a3; --line: #2d3138; --accent: #6b9cf0;
+  --good: #45c07f; --warn: #e09a4a; --bad: #ec6b5d;
+  --c0: #6b9cf0; --c1: #ef8458; --c2: #4fc497; --c3: #b48cf0;
+  --mid: 21,23,27; --matter: 215,218,226;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; }
+header { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+header .sub { color: var(--muted); font-size: 13px; }
+.pill { font-size: 12px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted);
+  font-variant-numeric: tabular-nums; }
+.pill.running { color: var(--good); border-color: currentColor; }
+.pill.building { color: var(--warn); border-color: currentColor; }
+.pill.converged { color: var(--accent); border-color: currentColor; }
+.pill.error { color: var(--bad); border-color: currentColor; }
+.spacer { flex: 1; }
+main { display: grid; grid-template-columns: 270px minmax(0, 1fr) 340px; gap: 16px; padding: 16px 20px; }
+@media (max-width: 1100px) { main { grid-template-columns: 250px minmax(0, 1fr); } #right { grid-column: 1 / -1; } }
+@media (max-width: 720px) { main { grid-template-columns: 1fr; padding: 12px 16px; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.card + .card { margin-top: 12px; }
+.card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+label.ctl { display: block; margin: 10px 0 2px; font-size: 13px; }
+label.ctl .val { float: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hint { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+select, button { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+select { width: 100%; }
+button { cursor: pointer; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.row { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.row > * { flex: 1; }
+.check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; }
+#viewwrap { position: relative; }
+#view { width: 100%; aspect-ratio: 1; display: block; border-radius: 8px; image-rendering: pixelated; background: rgb(var(--mid)); }
+.viewbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.viewbar select { width: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 4px 10px; }
+.seg button.on { background: var(--accent); color: #fff; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 4px; font-size: 13px; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; }
+td:first-child, th:first-child { text-align: left; }
+.sw { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+canvas.chart { width: 100%; height: 190px; display: block; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.stat .k { font-size: 11.5px; color: var(--muted); }
+.stat .v { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#err { color: var(--bad); font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Live Inverse Design</h1>
+  <span class="sub">2D FDFD + adjoint · Si / SiO₂ · E<sub>z</sub></span>
+  <span class="spacer"></span>
+  <span id="status" class="pill">connecting</span>
+  <span id="rate" class="pill">–</span>
+</header>
+<main>
+  <section id="left">
+    <div class="card">
+      <h2>Device</h2>
+      <select id="kind">
+        <option value="bend">90° bend</option>
+        <option value="splitter">Power splitter</option>
+        <option value="mode_converter">Mode converter TE0 → TE1</option>
+        <option value="demux">Wavelength demux</option>
+      </select>
+      <div id="geom"></div>
+      <div class="hint" style="margin-top:8px">Geometry and wavelength changes rebuild the solver (~1 s, cached) and keep the current design as a warm start.</div>
+    </div>
+    <div class="card">
+      <h2>Optimizer</h2>
+      <div id="live"></div>
+      <label class="check"><input type="checkbox" id="auto_beta"> Auto-binarize (raise β when stalled)</label>
+      <div class="row">
+        <button id="pause" class="primary">Pause</button>
+        <button id="check">Check binary</button>
+      </div>
+      <div class="row">
+        <select id="init"><option value="uniform">Start: uniform 0.5</option><option value="random">Start: random</option><option value="empty">Start: mostly oxide</option></select>
+        <button id="reset">Reset</button>
+      </div>
+      <div class="row"><button id="export">Download design (JSON)</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <div class="viewbar">
+        <div class="seg" id="mode">
+          <button data-m="field" class="on">Field Re E<sub>z</sub></button><button data-m="structure">Structure</button>
+        </div>
+        <select id="viewsel"></select>
+        <span class="spacer"></span>
+        <span class="hint" id="dims"></span>
+      </div>
+      <div id="viewwrap"><canvas id="view"></canvas></div>
+      <div id="err"></div>
+    </div>
+  </section>
+
+  <section id="right">
+    <div class="card">
+      <h2>Transmission</h2>
+      <table id="ttable"><thead><tr><th>Path</th><th>Target</th><th>Now</th><th>Binary</th><th>MEEP</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h2>MEEP verification</h2>
+      <div class="row" style="margin-top:0">
+        <select id="meepres"><option value="25">25 px/µm (same grid)</option><option value="50" selected>50 px/µm (2× finer)</option><option value="100">100 px/µm (4× finer)</option></select>
+        <button id="verify">Verify in MEEP</button>
+      </div>
+      <div class="hint" id="meepstatus" style="margin-top:8px">Runs the binary design in 2D MEEP (independent FDTD, broadband) in the background.</div>
+      <a id="meeplink" target="_blank" style="display:none"><img id="meepimg" alt="MEEP vs FDFD transmission spectra" style="width:100%;margin-top:8px;border-radius:6px;background:#fff"></a>
+    </div>
+    <div class="card">
+      <h2>History</h2>
+      <canvas class="chart" id="chart"></canvas>
+    </div>
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><div class="k">Iteration</div><div class="v" id="s_it">–</div></div>
+        <div class="stat"><div class="k">ms / iteration</div><div class="v" id="s_ms">–</div></div>
+        <div class="stat"><div class="k">Grayness</div><div class="v" id="s_gray">–</div></div>
+        <div class="stat"><div class="k">Loss</div><div class="v" id="s_loss">–</div></div>
+      </div>
+      <div class="hint" style="margin-top:10px">Grayness = mean 4ρ(1−ρ) over the window; 0 is fully binary. “Binary” T thresholds the projected density at 0.5 — the fabricable design.</div>
+    </div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const GEOM = {
+  wavelength:  {label: "Wavelength", unit: "nm", min: 1.20, max: 1.70, step: 0.01, scale: 1000, kinds: "all"},
+  wavelength2: {label: "Second wavelength", unit: "nm", min: 1.20, max: 1.70, step: 0.01, scale: 1000, kinds: ["demux"]},
+  width:       {label: "Waveguide width", unit: "nm", min: 0.30, max: 0.80, step: 0.02, scale: 1000, kinds: "all"},
+  width_out:   {label: "Output width", unit: "nm", min: 0.70, max: 1.40, step: 0.02, scale: 1000, kinds: ["mode_converter"]},
+  separation:  {label: "Output separation", unit: "µm", min: 1.0, max: 2.4, step: 0.08, scale: 1, kinds: ["splitter", "demux"]},
+  design:      {label: "Design window", unit: "µm", min: 1.6, max: 4.0, step: 0.2, scale: 1, kinds: "all"},
+  bandwidth:   {label: "Hold targets over ±", unit: "nm", min: 0, max: 0.05, step: 0.005, scale: 1000, kinds: "all",
+                hint: "Optimize at λ−Δ, λ, λ+Δ. The 40 nm grid detunes narrowband designs ~18 nm on finer grids; ±20 nm absorbs that"},
+};
+const TARGET = {
+  ratio:     {label: "Split ratio to top", unit: "", min: 0, max: 1, step: 0.01, scale: 1, kinds: ["splitter"]},
+  crosstalk: {label: "Crosstalk weight", unit: "", min: 0, max: 2, step: 0.05, scale: 1, kinds: ["demux"]},
+};
+const LIVE = {
+  radius: {label: "Min feature radius", unit: "nm", min: 0, max: 0.30, step: 0.01, scale: 1000,
+           hint: "Conic filter radius; larger = smoother, more fabricable"},
+  beta:   {label: "Projection β", unit: "", min: 0, max: 6, step: 0.05, log2: true,
+           hint: "Sharpness of the tanh threshold; high β pushes toward binary"},
+  lr:     {label: "Step size", unit: "", min: 0.005, max: 0.1, step: 0.005, scale: 1},
+};
+let frame = null, kind = null, mode = "field", dragging = new Set(), lastIter = 0, lastT = performance.now(), rate = 0;
+
+function post(patch) {
+  return fetch("/params", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(patch)});
+}
+function throttle(fn, ms) {
+  let t = 0, pending = null;
+  return v => { pending = v; const now = Date.now();
+    if (now - t > ms) { t = now; fn(pending); pending = null; }
+    else setTimeout(() => { if (pending !== null) { t = Date.now(); fn(pending); pending = null; } }, ms); };
+}
+function fmt(spec, v) {
+  if (spec.log2) return (2 ** v).toFixed(v < 3 ? 1 : 0);
+  const x = v * (spec.scale || 1);
+  return (spec.scale === 1000 ? x.toFixed(0) : x.toFixed(2)) + (spec.unit ? " " + spec.unit : "");
+}
+function slider(container, key, spec, onInput, onChange) {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<label class="ctl">${spec.label}<span class="val"></span></label>
+    <input type="range" min="${spec.min}" max="${spec.max}" step="${spec.step}" data-key="${key}">
+    ${spec.hint ? `<div class="hint">${spec.hint}</div>` : ""}`;
+  const inp = wrap.querySelector("input"), val = wrap.querySelector(".val");
+  const show = () => val.textContent = fmt(spec, +inp.value);
+  inp.addEventListener("pointerdown", () => dragging.add(key));
+  inp.addEventListener("pointerup", () => dragging.delete(key));
+  inp.addEventListener("blur", () => dragging.delete(key));
+  inp.addEventListener("input", () => { show(); onInput && onInput(+inp.value); });
+  inp.addEventListener("change", () => { dragging.delete(key); onChange && onChange(+inp.value); });
+  container.appendChild(wrap);
+  return {inp, show, spec};
+}
+const ctls = {};
+function buildControls(k) {
+  const g = $("#geom"); g.innerHTML = "";
+  for (const [key, spec] of Object.entries({...GEOM, ...TARGET})) {
+    if (spec.kinds !== "all" && !spec.kinds.includes(k)) { delete ctls[key]; continue; }
+    const live = key in TARGET;
+    const send = throttle(v => post({[key]: v}), 80);
+    ctls[key] = slider(g, key, spec, live ? send : null, v => post({[key]: v}));
+  }
+}
+(function buildLive() {
+  const l = $("#live");
+  for (const [key, spec] of Object.entries(LIVE)) {
+    const send = throttle(v => post({[key]: spec.log2 ? 2 ** v : v}), 80);
+    ctls[key] = slider(l, key, spec, send, v => post({[key]: spec.log2 ? 2 ** v : v}));
+  }
+})();
+function syncControls(f) {
+  const vals = {...f.params, ...f.ctl};
+  for (const [key, c] of Object.entries(ctls)) {
+    if (dragging.has(key) || document.activeElement === c.inp || !(key in vals)) continue;
+    c.inp.value = c.spec.log2 ? Math.log2(Math.max(vals[key], 1)) : vals[key];
+    c.show();
+  }
+  $("#auto_beta").checked = !!f.ctl.auto_beta;
+  $("#pause").textContent = f.ctl.paused ? "Run" : "Pause";
+}
+
+$("#kind").addEventListener("change", e => post({kind: e.target.value}));
+$("#auto_beta").addEventListener("change", e => post({auto_beta: e.target.checked}));
+$("#pause").addEventListener("click", () => post({paused: !(frame && frame.ctl.paused)}));
+$("#check").addEventListener("click", () => post({check: true}));
+$("#reset").addEventListener("click", () => post({reset: true, init: $("#init").value, beta: 4}));
+$("#verify").addEventListener("click", () => fetch("/verify", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({res: +$("#meepres").value})}));
+$("#export").addEventListener("click", () => { location.href = "/export"; });
+$("#viewsel").addEventListener("change", e => post({view: +e.target.value}));
+document.querySelectorAll("#mode button").forEach(b => b.addEventListener("click", () => {
+  mode = b.dataset.m; document.querySelectorAll("#mode button").forEach(x => x.classList.toggle("on", x === b));
+  if (frame) drawView(frame);
+}));
+
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const rgb = n => css(n).split(",").map(Number);
+const decode = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const off = document.createElement("canvas");
+
+function drawView(f) {
+  const {nx, ny} = f, eps = decode(f.eps), fld = f.field && mode === "field" ? decode(f.field) : null;
+  off.width = nx; off.height = ny;
+  const octx = off.getContext("2d"), img = octx.createImageData(nx, ny);
+  const mid = rgb("--mid"), mat = rgb("--matter");
+  const red = [205, 60, 50], blue = [45, 100, 200];
+  for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+    const s = i * ny + j, p = ((ny - 1 - j) * nx + i) * 4, e = eps[s] / 255;
+    let c;
+    if (fld) {
+      const v = (fld[s] - 127.5) / 127.5, a = Math.min(1, Math.abs(v)), tgt = v > 0 ? red : blue;
+      c = [0, 1, 2].map(k => mid[k] + (tgt[k] - mid[k]) * a);
+      c = c.map((x, k) => x * (1 - 0.42 * e) + mat[k] * 0.42 * e);
+    } else {
+      c = [0, 1, 2].map(k => mid[k] + (mat[k] - mid[k]) * e);
+    }
+    img.data[p] = c[0]; img.data[p + 1] = c[1]; img.data[p + 2] = c[2]; img.data[p + 3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  const cv = $("#view"), dpr = devicePixelRatio || 1, W = cv.clientWidth;
+  cv.width = W * dpr; cv.height = W * dpr;
+  const ctx = cv.getContext("2d"), k = W * dpr / nx;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(off, 0, 0, cv.width, cv.height);
+  // PML shading
+  ctx.fillStyle = "rgba(128,128,128,0.18)";
+  const P = f.npml * k, S = cv.width;
+  ctx.fillRect(0, 0, S, P); ctx.fillRect(0, S - P, S, P); ctx.fillRect(0, P, P, S - 2 * P); ctx.fillRect(S - P, P, P, S - 2 * P);
+  // design window
+  const [x0, x1, y0, y1] = f.design;
+  ctx.strokeStyle = css("--accent"); ctx.lineWidth = 1.5 * dpr; ctx.setLineDash([6 * dpr, 4 * dpr]);
+  ctx.strokeRect(x0 * k, (ny - y1) * k, (x1 - x0) * k, (y1 - y0) * k);
+  ctx.setLineDash([]);
+  // ports
+  ctx.font = `${11 * dpr}px -apple-system, sans-serif`; ctx.fillStyle = css("--ink"); ctx.strokeStyle = css("--ink");
+  ctx.lineWidth = 2 * dpr;
+  for (const [name, p] of Object.entries(f.ports)) {
+    ctx.beginPath();
+    if (p.axis === "x") { const X = (p.index + 0.5) * k; ctx.moveTo(X, (ny - p.hi) * k); ctx.lineTo(X, (ny - p.lo) * k);
+      ctx.fillText(name, X + 4 * dpr, (ny - p.hi) * k + 12 * dpr); }
+    else { const Y = (ny - p.index - 0.5) * k; ctx.moveTo(p.lo * k, Y); ctx.lineTo(p.hi * k, Y);
+      ctx.fillText(name, p.hi * k + 4 * dpr, Y + 4 * dpr); }
+    ctx.stroke();
+  }
+  $("#dims").textContent = `${(nx * f.dx).toFixed(1)} µm square · dx ${(f.dx * 1000).toFixed(0)} nm · window ${x1 - x0}×${y1 - y0} px`;
+}
+
+function drawChart(f) {
+  const cv = $("#chart"), dpr = devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+  const h = f.hist || []; if (!h.length) return;
+  const L = 34, R = 8, T = 8, B = 22, w = W - L - R, hh = H - T - B;
+  const i0 = h[0].it, i1 = Math.max(h[h.length - 1].it, i0 + 1);
+  const X = it => L + (it - i0) / (i1 - i0) * w, Y = v => T + (1 - v) * hh;
+  ctx.strokeStyle = css("--line"); ctx.fillStyle = css("--muted"); ctx.font = "11px -apple-system, sans-serif"; ctx.lineWidth = 1;
+  for (const v of [0, 0.25, 0.5, 0.75, 1]) { ctx.beginPath(); ctx.moveTo(L, Y(v)); ctx.lineTo(W - R, Y(v)); ctx.stroke(); ctx.fillText(v.toFixed(2), 2, Y(v) + 4); }
+  ctx.fillText(`iter ${i0}`, L, H - 6); const e = `${i1}`; ctx.fillText(e, W - R - ctx.measureText(e).width, H - 6);
+  f.terms.forEach(t => {
+    const col = css(`--c${pathIndex(f, t) % 4}`), centre = isCentre(f, t);
+    ctx.strokeStyle = col; ctx.globalAlpha = centre ? 1 : 0.4;
+    if (centre) { ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(L, Y(t.target)); ctx.lineTo(W - R, Y(t.target)); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.lineWidth = centre ? 2 : 1; ctx.beginPath();
+    h.forEach((p, k) => { const v = p.T[t.label]; if (v === undefined) return; k ? ctx.lineTo(X(p.it), Y(Math.min(1, v))) : ctx.moveTo(X(p.it), Y(Math.min(1, v))); });
+    ctx.stroke(); ctx.globalAlpha = 1;
+  });
+}
+
+const pathOf = t => t.label.split(" @")[0];
+function pathIndex(f, t) { return [...new Set(f.terms.map(pathOf))].indexOf(pathOf(t)); }
+function isCentre(f, t) { return [f.params.wavelength, f.params.wavelength2].some(l => l !== undefined && Math.abs(l - t.wavelength) < 1e-6); }
+function drawTable(f) {
+  const tb = $("#ttable tbody"); tb.innerHTML = "";
+  f.terms.forEach((t, n) => {
+    const now = f.last ? f.last.T[t.label] : undefined, bin = f.binary ? f.binary.T[t.label] : undefined;
+    const mr = meepRow(f, t);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td><span class="sw" style="background:var(--c${pathIndex(f, t) % 4});opacity:${isCentre(f, t) ? 1 : 0.4}"></span>${t.label}</td>
+      <td>${t.target.toFixed(2)}</td><td>${now === undefined ? "–" : now.toFixed(3)}</td><td>${bin === undefined ? "–" : bin.toFixed(3)}</td><td title="${mr ? mr.title : ""}">${mr ? mr.text : "–"}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+function meepRow(f, t) {
+  const m = f.meep;
+  if (!m || m.state !== "done" || m.kind !== f.kind) return null;
+  const r = m.rows.find(r => t.label.startsWith(r.path) && Math.abs(r.wavelength - t.wavelength) < 1e-9);
+  if (!r) return null;
+  let title = `FDFD ${r.T_fdfd.toFixed(3)} at the same pixels`;
+  if (r.T_meep_peak !== undefined) title += `; MEEP passband peak ${r.T_meep_peak.toFixed(3)} at ${(r.peak_wavelength * 1e3).toFixed(0)} nm`;
+  return {text: r.T_meep.toFixed(3), title};
+}
+function drawMeep(f) {
+  const m = f.meep || {state: "idle"}, st = $("#meepstatus"), btn = $("#verify");
+  btn.disabled = m.state === "running";
+  if (m.state === "running") st.textContent = `Running MEEP at ${m.res} px/µm on the design from iteration ${m.iter}… (${Math.round(Date.now() / 1000 - m.started)} s)`;
+  else if (m.state === "error") st.textContent = "MEEP check failed: " + m.error;
+  else if (m.state === "done") {
+    const worst = Math.max(...m.rows.map(r => Math.abs(r.T_meep - r.T_fdfd)));
+    const peaks = m.rows.filter(r => r.T_meep_peak !== undefined && Math.abs(r.peak_wavelength - r.wavelength) > 0.004)
+      .map(r => `${r.path} peaks at ${(r.peak_wavelength * 1e3).toFixed(0)} nm (T ${r.T_meep_peak.toFixed(2)})`);
+    st.textContent = `${m.kind}, iteration ${m.iter}, ${m.res} px/µm, ${m.wall.toFixed(0)} s: worst |T_MEEP − T_FDFD| = ${worst.toFixed(3)} at the design wavelengths` +
+      (peaks.length ? ". Detuned: " + peaks.join("; ") : "") + ". Hover a MEEP value for details.";
+    if ($("#meeplink").getAttribute("href") !== m.png) { $("#meeplink").href = m.png; $("#meepimg").src = m.png; }
+    $("#meeplink").style.display = "block";
+  }
+}
+function render(f) {
+  const st = f.status || "–", cls = st.startsWith("error") ? "error" : st;
+  $("#status").className = "pill " + cls; $("#status").textContent = st;
+  $("#err").textContent = st.startsWith("error") ? st : "";
+  if (!f.nx) return;
+  if (f.kind !== kind) { kind = f.kind; $("#kind").value = kind; buildControls(kind); }
+  syncControls(f);
+  const vs = $("#viewsel");
+  if (vs.options.length !== f.views.length || [...vs.options].some((o, i) => o.text !== f.views[i])) {
+    vs.innerHTML = f.views.map((v, i) => `<option value="${i}">${v}</option>`).join("");
+  }
+  vs.value = Math.min(f.ctl.view, f.views.length - 1);
+  drawView(f); drawChart(f); drawTable(f); drawMeep(f);
+  const now = performance.now();
+  if (f.iter !== lastIter) { const r = (f.iter - lastIter) / ((now - lastT) / 1000); rate = rate ? 0.8 * rate + 0.2 * r : r; lastIter = f.iter; lastT = now; }
+  $("#rate").textContent = st === "running" ? `${rate.toFixed(1)} it/s · β ${f.ctl.beta.toFixed(1)}` : `β ${f.ctl.beta.toFixed(1)}`;
+  $("#s_it").textContent = f.iter;
+  $("#s_ms").textContent = f.last ? f.last.ms.toFixed(0) : "–";
+  $("#s_gray").textContent = f.last ? (100 * f.last.gray).toFixed(1) + "%" : "–";
+  $("#s_loss").textContent = f.last ? f.last.loss.toExponential(1) : "–";
+}
+
+function connect() {
+  const es = new EventSource("/events");
+  es.onmessage = ev => { frame = JSON.parse(ev.data); render(frame); };
+  es.onerror = () => { $("#status").className = "pill error"; $("#status").textContent = "disconnected"; };
+}
+addEventListener("resize", () => frame && render(frame));
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => frame && render(frame));
+connect();
+</script>
+</body>
+</html>

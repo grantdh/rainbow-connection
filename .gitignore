@@ -117,3 +117,4 @@ benchmarks/*/results/
 
 # FDTD backend runs (generated)
 lib/fdtd/runs/
+lib/inverse/runs/
