@@ -19,8 +19,10 @@ How a case maps onto MEEP (each point was checked on a small grid; see lib/fdtd/
 - soft_e: MEEP has no field setter, but its D update adds -dt J(t_n + dt/2) at a point source. So a current
   J(tau) = -A s(n dt) / dt_meep on the exact sample reproduces "E += A s(n dt) after the E update of
   iteration n" to rounding. The run checks this at iteration 1, where E at the source must equal A s(dt).
-- Probes are read with get_field_point at the exact sample position, where MEEP's interpolation weight is 1.
-  E is stored in V/m (unchanged); H is converted from MEEP's units (H_meep = Z0 H) to A/m.
+- Probes are read at the exact sample position, where MEEP's interpolation weight is 1, with the call
+  get_field_point makes (fields.get_field_from_comp) on a field-vector built once per sample: the same values,
+  without converting the point on every step. E is stored in V/m (unchanged); H is converted from MEEP's units
+  (H_meep = Z0 H) to A/m.
 """
 from __future__ import annotations
 
@@ -33,10 +35,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from case import Case, CaseError, position  # noqa: E402
-from common import (MU0, check_capabilities, e_probe_peak, probe_entries, refuse, sha256,  # noqa: E402
-                    write_record)
+from common import MU0, check_capabilities, e_probe_peak, probe_entries, sha256, write_record  # noqa: E402
 
 import meep as mp  # noqa: E402
+from meep.simulation import py_v3_to_vec  # noqa: E402
 
 
 def waveform(w: dict):
@@ -101,12 +103,14 @@ def main(argv: list[str]) -> int:
     sim.init_sim()
 
     z0 = MU0 * case.c
-    probes = []                                           # per probe: MEEP component, points, stride, scale, rows
+    probes = []                                           # per probe: MEEP component, field vectors, stride, scale
     for p in case.raw.get("probes", []):
         comp = p["component"]
         probes.append({"name": p["name"], "mp": getattr(mp, comp), "every": int(p.get("every", 1)),
-                       "pts": [vec(x) for x in position(comp, case.probe_samples[p["name"]])],
+                       "vecs": [py_v3_to_vec(sim.dimensions, vec(x), sim.is_cylindrical)
+                                for x in position(comp, case.probe_samples[p["name"]])],
                        "scale": 1.0 if comp in ecomps else 1.0 / z0, "rows": []})
+    get = sim.fields.get_field_from_comp                  # what get_field_point calls, minus the per-call conversion
 
     source_check = None
     tic = time.time()
@@ -121,7 +125,7 @@ def main(argv: list[str]) -> int:
                             "rel_err": abs(got - want) / abs(want) if want else None}
         for pr in probes:
             if it % pr["every"] == 0:
-                pr["rows"].append([sim.get_field_point(pr["mp"], q).real * pr["scale"] for q in pr["pts"]])
+                pr["rows"].append([get(pr["mp"], v).real * pr["scale"] for v in pr["vecs"]])
     wall = time.time() - tic
 
     # Read-back at the end: every PEC sample, and tangential E on a 7 x 7 lattice of each wall (all of them would
