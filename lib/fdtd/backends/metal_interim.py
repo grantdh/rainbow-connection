@@ -35,7 +35,7 @@ class Engine:
     grid: list[int]                                       # engine grid (Nx, Ny, Nz)
     to_flat: Callable[[str, np.ndarray], np.ndarray]      # spec indices of a component -> engine flat indices
     patches: list[str] = field(default_factory=list)
-    patch: tuple[re.Pattern, str] | None = None           # source edit applied before extracting the kernels
+    patch: Callable[[str], tuple[str, int]] | None = None  # source edit before extracting: text -> (text, count)
     extra_checks: Callable[[np.ndarray], dict] | None = None   # gets the final E buffers (n_e x cells)
 
 
@@ -43,7 +43,7 @@ def extract_kernel(engine: Engine) -> tuple[str, bytes]:
     data = engine.program.read_bytes()
     text = data.decode()
     if engine.patch:
-        text, n = engine.patch[0].subn(engine.patch[1], text)
+        text, n = engine.patch(text)
         if n != 1:
             raise RuntimeError(f"patch matched {n} times in {engine.program} (expected 1): the program changed")
     m = re.search(r'let metalCode = """\n(.*?)\n"""', text, re.S)

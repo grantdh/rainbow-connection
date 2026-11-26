@@ -8,8 +8,8 @@ What runs: the two Metal kernels (updateE, updateH) of ~/Dev/Claude/LoopFDTD/dip
 build time (nothing is copied into this repo or written into LoopFDTD), driven by metal_host.swift in place of the
 program's own host loop (metal_interim.py). The record lists every deviation from the shipped program:
   - always:               "host": the case-driven host replaces the program's host code (kernels verbatim)
-  - --guard-fix:          the per-component boundary guard of examples/yee-dispersion (GUARD_FIX_OLD/NEW), so
-                          the far-wall normal E is updated; without it the kernel is as shipped
+  - --guard-fix:          the per-component boundary guard (loopfdtd_patches.guard_fix), so the far-wall normal
+                          E is updated; without it the kernel is as shipped
   - --engine-c:           the program's float32 constants (c0 = 3e8, mu0 = 4e-7 pi) and float32 waveform
                           arithmetic, to reproduce the program's recorded runs; by default the host uses the
                           case's c, so dt and Cb/Db match every other engine
@@ -23,7 +23,6 @@ shifts are the negated e_minus_half convention of case.py.
 """
 from __future__ import annotations
 
-import importlib.util
 import math
 import sys
 from pathlib import Path
@@ -34,6 +33,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 from case import Case, CaseError, E_COMPONENTS, H_COMPONENTS, PEC_CELL_CONVENTIONS  # noqa: E402
 from common import check_capabilities, refuse  # noqa: E402
+from loopfdtd_patches import GUARD_FIX_LABEL, guard_fix  # noqa: E402
 import metal_interim as mi  # noqa: E402
 
 LOOP = Path.home() / "Dev/Claude/LoopFDTD"
@@ -41,14 +41,6 @@ PROGRAM = LOOP / "dipole_s11.swift"
 FIELDS = E_COMPONENTS + H_COMPONENTS
 SHIFT = {**{c: tuple(-x for x in s) for c, s in PEC_CELL_CONVENTIONS["e_minus_half"].items()},
          "Hx": (0, 1, 1), "Hy": (1, 0, 1), "Hz": (1, 1, 0)}
-
-
-def guard_fix_patch():
-    """GUARD_FIX_OLD/NEW from examples/yee-dispersion/run.py, the one definition of that fix."""
-    spec = importlib.util.spec_from_file_location("yee_dispersion", HERE.parents[2] / "examples/yee-dispersion/run.py")
-    yee = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(yee)
-    return yee.GUARD_FIX_OLD, yee.GUARD_FIX_NEW
 
 
 def engine_c_coefficients(case: Case):
@@ -84,7 +76,7 @@ def main(argv: list[str]) -> int:
     N = [k + 1 for k in case.n]
     patches = []
     if "--guard-fix" in flags:
-        patches.append("guard_fix: per-component E boundary guard (examples/yee-dispersion GUARD_FIX)")
+        patches.append(GUARD_FIX_LABEL)
     if "--engine-c" in flags:
         patches.append("engine_c: the program's float32 constants (c0 = 3e8) and float32 waveform arithmetic")
     if "--swift-source-order" in flags:
@@ -93,7 +85,7 @@ def main(argv: list[str]) -> int:
         name="loopfdtd", repo=LOOP, program=PROGRAM, fields=FIELDS, n_e=3, grid=N,
         to_flat=lambda comp, idx: (lambda li: li[:, 0] + li[:, 1] * N[0] + li[:, 2] * N[0] * N[1])(
             np.asarray(idx, dtype=np.int64) + np.asarray(SHIFT[comp])),
-        patches=patches, patch=guard_fix_patch() if "--guard-fix" in flags else None)
+        patches=patches, patch=guard_fix if "--guard-fix" in flags else None)
     coeffs = engine_c_coefficients(case) if "--engine-c" in flags else mi.case_coefficients(case)
     run_dir.mkdir(parents=True, exist_ok=True)
     mi.run(case, case_path, run_dir, engine, coeffs, drive_pec="--swift-source-order" in flags)

@@ -18,7 +18,7 @@ and returns each line's damping. Four engines:
 | engine | what runs | box it must solve |
 |---|---|---|
 | `loopfdtd` | LoopFDTD `dipole_s11.swift`, conductor removed, as coded | none: see below |
-| `loopfdtd_fixed` | same with a per-component E boundary guard (patch shown in `run.py`, `GUARD_FIX_*`) | (N-1) dx Yee box |
+| `loopfdtd_fixed` | same with a per-component E boundary guard (`GUARD_FIX_*` in `lib/fdtd/backends/loopfdtd_patches.py`, shared with the lib/fdtd LoopFDTD backend) | (N-1) dx Yee box |
 | `meephistopheles` | MEEPhistopheles `src/metal/dipole_s11.swift`, conductor removed (Ez/Hx/Hy only) | (N-1) dx box, 2D TM modes (p = 0) |
 | `meep` | MEEP 3D, metallic cell boundary, one Yee step per sample (`../metal-fdtd-crosscheck/meep_dipole_box.py --empty`) | N dx Yee box |
 

@@ -218,14 +218,20 @@ def lorentz_eps(energy_eV: np.ndarray, eps_inf: float, poles: list[dict]) -> np.
     return eps
 
 
-def converter():
-    """rainbow-connection's Lorentz fitter (lib/converters/yambo_eps_to_meep.py), loaded by path."""
+def lib_module(relpath: str):
+    """A rainbow-connection module loaded by path (relative to the repo root), named after its file, without
+    touching sys.path; e.g. lib_module("lib/converters/yambo_eps_to_meep.py")."""
     import importlib.util
-    path = REPO_ROOT / "lib/converters/yambo_eps_to_meep.py"
-    spec = importlib.util.spec_from_file_location("yambo_eps_to_meep", path)
+    path = REPO_ROOT / relpath
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def converter():
+    """rainbow-connection's Lorentz fitter (lib/converters/yambo_eps_to_meep.py), loaded by path."""
+    return lib_module("lib/converters/yambo_eps_to_meep.py")
 
 
 # --------------------------------------------------------------------------- optics
