@@ -192,6 +192,11 @@ openEMS isn't surveyed here. It enters the same way once `si-dipole-power-split`
   matters as much as abrun's `same_binary` / `cross_build` split: a patched engine is a different engine.
 - `timing_grade` follows abrun and the house rules: `bench` only under the timing lock. Throughput is otherwise an
   observation and never becomes a "speedup" claim.
+- `concurrent_jobs` is how many backend runs the test runner let overlap (`MUPPET_FDTD_JOBS`, from `--jobs N`).
+  It is the effective number: 1 under the shared machine lock, which serialises every launch (`exlib.lock_mode()`).
+  It is null when a backend was launched any other way, since then nothing knows. Above 1, `wall_s` and the
+  throughput were measured while sharing the machine with up to N - 1 other runs, and every reported wall time
+  says so. No gate reads a wall time; the solved numbers do not depend on N.
 - The record is written by the adapter, not trusted from engine stdout. The adapter hashes the binary it launched.
 
 ## 6. Analysis (shared, `lib/fdtd/analyze.py`)
@@ -216,6 +221,16 @@ citable classes.
 | C3 | 1-D dielectric slab, eps_r 12, plane wave | T/R vs Airy within 1e-3 | needs `plane_wave`, `dft_plane` (v1) |
 | C4 | gap-fed dipole, conductors as `pec_cells` | resonance agrees between engines to 0.5 %, **reported, not gated**, until the probes are calibrated | MEEP, LoopFDTD, MEEPhistopheles (2-D) |
 | C5 | 1-D Lorentz slab from `yambo_material.json` | T/R/A vs Airy with the same ε(ω), within 1e-3 | MEEP only |
+
+**Running them.** `lib/fdtd/test_all.py` runs everything: the case-file tests, then every backend launch of the
+three engine suites in one pool, then each suite's gates. Each launch writes `lib/fdtd/runs/<engine>/<variant>/<case>/`,
+and the directory is its identity: two suites asking for the same run share one launch.
+- `--jobs N` runs N launches at a time, with the 32,000-step ring-downs first.
+- Use `MUPPET_SHARE=1` for these untimed correctness runs (PROTOCOL §9). Without it, the shared machine lock
+  (machlock) serialises the launches whatever N is, and the runner says so.
+- Each engine suite (`test_meep_backend.py`, `test_loopfdtd_backend.py`, `test_meephistopheles_backend.py`) also
+  runs on its own with the same flags. The LoopFDTD suite then launches the MEEP C1/C4 runs it compares with.
+- A full run exits 1 with exactly one FAIL, the as-shipped LoopFDTD C1 gate, which stays red by design.
 
 C1 and C4 already run in `examples/`. They now exist as case files in `lib/fdtd/cases/`:
 - `c1-empty-pec-box.json`
@@ -311,6 +326,35 @@ run a 3-D case, so it needs its own 2-D case once `dimensions: 2` is built.
      300.8071 MHz, is off by under 1e-5 %.
    - **Observations, not benchmarks.** One 63 x 63 plane, 32,000 steps: MEEP 2.3 s, MEEPhistopheles 8.4 s. The
      Metal host waits on the GPU every step, which dominates at this size.
+
+   **Follow-ups done 2026-11-26.** None of them changes a solved number. Every one of the 59 probe arrays in the
+   23 conformance runs is byte-identical to the runs before these changes. The only record difference is the
+   guard-fix patch label, now `guard_fix: per-component E boundary guard`, which no longer names a file.
+   - **One definition of the LoopFDTD guard fix.** `GUARD_FIX_OLD/NEW`, `guard_fix()` and its record label moved
+     from `examples/yee-dispersion/run.py` to `lib/fdtd/backends/loopfdtd_patches.py`.
+     - The backend imports it, so it no longer runs an example script to get the fix.
+     - The example loads it by path with `exlib.lib_module()`, the generalised `exlib.converter()` loader, without
+       touching `sys.path`.
+     - The lib/fdtd tests still load yee-dispersion's matrix pencil and Yee mode tables until step 3. They now
+       refuse a case whose dx differs from that example's.
+     - The constants and both of yee-dispersion's generated Swift programs are byte-identical, and the backend's
+       guard-fixed kernel hash is unchanged (89aa3b18…).
+     - yee-dispersion before and after: 29 gated checks pass, 0 fail, 1 reported. Every line and engine result
+       is identical; only wall times differ.
+   - **Cheaper MEEP probe reads.** The per-step loop calls `fields.get_field_from_comp` on field vectors built
+     once. That is the call `get_field_point` makes, so the values are the same by construction, and the
+     comparison above confirms it. The 32,000-step 2-D ring-down went from 2.26 s to 0.75 s, where the reads
+     dominated. The 3-D ring-down is about 100 s either way: there the MEEP step dominates.
+   - **Parallel runs.** `lib/fdtd/test_all.py --jobs N` (see §7). Supporting changes:
+     - Metal host builds are atomic, so concurrent first builds of one kernel cannot race.
+     - Every record carries the effective `concurrent_jobs`. `exlib.lock_mode()` is the one statement of which
+       lock `exlib.run` uses, so the runner knows when machlock serialises everything.
+     - A launch is named by its run directory, and two different launches naming one directory are refused.
+       Identical launches run once; the old MEEPhistopheles suite ran one engine-c job twice.
+     - 3-D MEEP runs moved from `runs/meep/<case>` to `runs/meep/case/<case>`, the layout of every other run.
+
+     All 23 launches, same machine, same day: 190 s sequentially, 114 s with `--jobs 4`. The floor is the MEEP 3-D
+     ring-down alone (about 104 s). Wall times are observations, not benchmarks.
 
    Every engine in the cross-check now runs from case files. Next: port
    `metal-fdtd-crosscheck` and `yee-dispersion` to them. The gate lines must be unchanged, the same rule as for

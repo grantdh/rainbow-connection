@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -81,6 +82,8 @@ def write_record(run_dir: Path, case: Case, case_path: Path, *, engine: dict, re
                      "steps": case.steps, **realised},
         "checks": checks,
         "wall_s": wall_s, "timing_grade": "observation",
+        # Runs the lib/fdtd test runner let overlap with this one (MUPPET_FDTD_JOBS; null when launched another way).
+        "concurrent_jobs": int(os.environ["MUPPET_FDTD_JOBS"]) if "MUPPET_FDTD_JOBS" in os.environ else None,
         "throughput_Mcells_per_s": float(np.prod(case.n)) * case.steps / wall_s / 1e6,
         "throughput_note": throughput_note,
         "probes": probes, "time_labels": time_labels, **extra,

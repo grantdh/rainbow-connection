@@ -8,8 +8,11 @@ inputs, runs it, and turns its outputs into probes.npz and record.json, with the
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
+import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -53,17 +56,29 @@ def extract_kernel(engine: Engine) -> tuple[str, bytes]:
 
 
 def build_host(kernel: str) -> tuple[Path, str, bytes]:
+    """Build (once per kernel + host hash) and return (executable, build key, host source bytes).
+
+    Safe when several backends build the same key at once (parallel test runs): each compiles in its own
+    temporary directory and moves the finished binary into place with an atomic rename, so a reader sees either
+    no binary or a complete one, and the builds that lose the race only replace it with identical bytes."""
     host = HOST.read_bytes()
     key = sha256(kernel.encode() + b"\0" + host)[:16]
     bdir = BUILD_ROOT / key
     exe = bdir / "host"
     if not exe.exists():
         bdir.mkdir(parents=True, exist_ok=True)
-        (bdir / "kernel.swift").write_text('let metalCode = """\n' + kernel + '\n"""\n')
-        (bdir / "main.swift").write_bytes(host)          # swiftc allows top-level code only in main.swift
-        r = subprocess.run(SWIFTC + ["kernel.swift", "main.swift", "-o", "host"], cwd=bdir, capture_output=True, text=True)
-        if r.returncode != 0:
-            raise RuntimeError(f"swiftc failed:\n{r.stderr[-2000:]}")
+        tmp = Path(tempfile.mkdtemp(prefix=f".{key}.", dir=BUILD_ROOT))
+        try:
+            (tmp / "kernel.swift").write_text('let metalCode = """\n' + kernel + '\n"""\n')
+            (tmp / "main.swift").write_bytes(host)       # swiftc allows top-level code only in main.swift
+            r = subprocess.run(SWIFTC + ["kernel.swift", "main.swift", "-o", "host"], cwd=tmp, capture_output=True,
+                               text=True)
+            if r.returncode != 0:
+                raise RuntimeError(f"swiftc failed:\n{r.stderr[-2000:]}")
+            for name in ("kernel.swift", "main.swift", "host"):     # the sources first, the binary last
+                os.replace(tmp / name, bdir / name)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
     return exe, key, host
 
 

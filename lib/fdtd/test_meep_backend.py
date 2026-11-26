@@ -11,8 +11,8 @@ Gated, C1 ring-down: every matrix-pencil line of amplitude >= 0.10 lies on the d
 Reported, not gated: C1/C4 against what LoopFDTD and MEEPhistopheles recorded in examples/metal-fdtd-crosscheck
   (same box, conductor cells, source and probe samples; they differ in c, precision and the Swift boundary guard).
 
-Run: python3 lib/fdtd/test_meep_backend.py [--skip-ringdown]      (C1 ring-down: 32,000 steps, about a minute)
-Runs go to lib/fdtd/runs/meep/<case>/ (gitignored). Launches go through examples/common/exlib.run (locks, run log).
+Run: python3 lib/fdtd/test_meep_backend.py [--skip-ringdown] [--jobs N]   (C1 ring-down: 32,000 steps, 1-2 min)
+Runs go to lib/fdtd/runs/meep/case/<case>/ (gitignored). Launches go through examples/common/exlib.run (locks, run log).
 """
 from __future__ import annotations
 
@@ -22,12 +22,21 @@ import sys
 
 import numpy as np
 
-from testlib import (BACKENDS, CASES, RUNS, XCHECK, check, exlib, finish, gate_ringdown, load_yee,  # noqa: F401
-                     readback_checks, ringdown_lines, run_backend)
+from testlib import (CASES, XCHECK, backend_job, check, exlib, gate_ringdown, load_yee, readback_checks,
+                     ringdown_lines, run_suite)
 from case import Case
 
 yee = load_yee()
 CROSSCHECK = {"c1-empty-pec-box": "empty", "c4-gap-dipole": "fixed", "c4-gap-dipole-closed-gap": "shipped"}
+RINGDOWN = "c1-empty-pec-box-ringdown"
+
+
+def case_names(argv: list[str]) -> list[str]:
+    return list(CROSSCHECK) + ([] if "--skip-ringdown" in argv else [RINGDOWN])
+
+
+def jobs(argv: list[str]):
+    return [backend_job("meep", n) for n in case_names(argv)]
 
 
 def peak_mhz(t, v):
@@ -36,27 +45,22 @@ def peak_mhz(t, v):
     return float(f[band][np.argmax(X[band])] / 1e6)
 
 
-def main(argv: list[str]) -> int:
-    checks = exlib.Checks()
-    names = list(CROSSCHECK) + ([] if "--skip-ringdown" in argv else ["c1-empty-pec-box-ringdown"])
+def gate(checks: exlib.Checks, results: dict, argv: list[str]) -> None:
     runs = {}
-    for name in names:
-        path, out = CASES / f"{name}.json", RUNS / "meep" / name
-        rec, pr = run_backend(checks, [exlib.MEEP_PYTHON, BACKENDS / "meep_backend.py", path, out], out,
-                              f"meep_backend {name}")
+    for name in case_names(argv):
+        rec, pr = results[backend_job("meep", name).key]
         if rec:
             readback_checks(checks, name, rec, source_rel_tol=1e-12)
-            runs[name] = (Case.load(path), rec, pr)
+            runs[name] = (Case.load(CASES / f"{name}.json"), rec, pr)
 
-    name = "c1-empty-pec-box-ringdown"
-    if name in runs:
-        case, rec, pr = runs[name]
-        rows = ringdown_lines(yee, rec, pr["gap_ez"].mean(axis=1), case.box_m)
+    if RINGDOWN in runs:
+        case, rec, pr = runs[RINGDOWN]
+        rows = ringdown_lines(yee, rec, pr["gap_ez"].mean(axis=1), case)
         gate_ringdown(checks, yee, "C1 (meep)", rows)
         for r in sorted(rows, key=lambda r: -r["amp"])[:6]:
             check(checks, "  line", None, f"{r['f_MHz']:.4f} MHz amp {r['amp']:.2f} -> {r['mode']} Yee "
                   f"{r['f_yee_MHz']:.4f} MHz (err {r['err_pct']:+.1e} %, continuum {r['cont_err_pct']:+.3f} %)")
-        (RUNS / "meep" / name / "lines.json").write_text(json.dumps(rows, indent=1) + "\n")
+        (backend_job("meep", RINGDOWN).out / "lines.json").write_text(json.dumps(rows, indent=1) + "\n")
 
     # Reported: the same problems as the Swift engines recorded them (coarse 2000-step FFT peaks).
     for name, variant in CROSSCHECK.items():
@@ -75,8 +79,7 @@ def main(argv: list[str]) -> int:
             parts.append(f"first nonzero sample: MEEP {v[1]:.5e}, LoopFDTD {loop_v1:.5e} (ratio {v[1] / loop_v1:.6f}; "
                          f"s(dt) at c = 299792458 vs 3e8 predicts {s(case.dt()) / s(case.dt(3e8)):.6f})")
         check(checks, f"{name} vs the Swift engines' recorded run (2000-step FFT peak, coarse)", None, "; ".join(parts))
-    return finish(checks)
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(run_suite(jobs, gate, sys.argv[1:]))
