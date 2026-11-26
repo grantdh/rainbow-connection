@@ -1,0 +1,81 @@
+{
+ "schema": "muppet-fdtd-case/0",
+ "dimensions": 3,
+ "grid": {
+  "n": [
+   63,
+   63,
+   127
+  ],
+  "dx_m": 0.025
+ },
+ "time": {
+  "courant": 0.5715767664977295,
+  "c_m_per_s": 299792458.0,
+  "steps": 32000
+ },
+ "precision": "any",
+ "boundaries": {
+  "x-": "pec",
+  "x+": "pec",
+  "y-": "pec",
+  "y+": "pec",
+  "z-": "pec",
+  "z+": "pec"
+ },
+ "materials": {
+  "vacuum": {
+   "eps_r": 1.0,
+   "sigma_S_per_m": 0.0
+  }
+ },
+ "background": "vacuum",
+ "regions": [],
+ "sources": [
+  {
+   "kind": "soft_e",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30,
+     63
+    ],
+    "hi": [
+     34,
+     34,
+     63
+    ]
+   },
+   "amplitude_V_per_m": 50.0,
+   "waveform": {
+    "type": "gaussian_modulated",
+    "f0_Hz": 300000000.0,
+    "t0_s": 3.3333333333333334e-08,
+    "width_s": 1.6666666666666667e-09
+   }
+  }
+ ],
+ "probes": [
+  {
+   "name": "gap_ez",
+   "kind": "e_samples",
+   "component": "Ez",
+   "indices": {
+    "lo": [
+     30,
+     30,
+     63
+    ],
+    "hi": [
+     34,
+     34,
+     63
+    ]
+   },
+   "every": 1
+  }
+ ],
+ "name": "c1-empty-pec-box-ringdown",
+ "origin": "examples/yee-dispersion's ring-down test on the C1 box: 32,000 steps, envelope spread shortened from 3 to 0.5 periods so modes from ~120 to ~480 MHz are driven; analyse t > 90 ns with the matrix pencil. Box, source plane and probe are those of c1-empty-pec-box (the Swift programs' (N-1) dx problem)."
+}

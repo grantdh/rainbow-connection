@@ -14,7 +14,7 @@ net injected charge vanishes) and estimates the ring-down lines (t > 90 ns, afte
 harmonic inversion, which resolves lines closer than an FFT bin and reports their damping:
 
   - loopfdtd        LoopFDTD/dipole_s11.swift, conductor removed (as coded)
-  - loopfdtd_fixed  same, with a per-component E-field boundary guard (see GUARD_FIX)
+  - loopfdtd_fixed  same, with a per-component E-field boundary guard (GUARD_FIX, lib/fdtd/backends/loopfdtd_patches.py)
   - meephistopheles MEEPhistopheles/src/metal/dipole_s11.swift, conductor removed (Ez/Hx/Hy only)
   - meep            MEEP 3D, one Yee step per sample (meep_dipole_box.py --empty)
 
@@ -68,40 +68,7 @@ AMP_THRESH = 0.03                                  # lines reported
 SPREAD_PERIODS = 0.5                               # Gaussian envelope spread in the generated variants (as coded: 3 periods = 10 ns)
 CLUSTER_PCT = 0.3                                  # poles closer than this are one cluster (distinct excited modes are >= 0.08 % apart; see README)
 AMP_GATE = 0.10                                    # lines gated (weak lines near the report threshold carry ~0.03 % pencil error)
-GUARD_FIX_OLD = re.compile(
-    r"if \(i == 0 \|\| i >= Nx-1 \|\| j == 0 \|\| j >= Ny-1 \|\| k == 0 \|\| k >= Nz-1\) return;\s*\n"
-    r"(?P<mid>.*?)"
-    r"// Ex: dHz/dy - dHy/dz\s*\n\s*Ex\[idx\] \+= Cb \* \(\(Hz\[idx_jp\] - Hz\[idx\]\) - \(Hy\[idx_kp\] - Hy\[idx\]\)\);\s*\n"
-    r"\s*// Ey: dHx/dz - dHz/dx\s*\n\s*Ey\[idx\] \+= Cb \* \(\(Hx\[idx_kp\] - Hx\[idx\]\) - \(Hz\[idx_ip\] - Hz\[idx\]\)\);\s*\n"
-    r"\s*// Ez: dHy/dx - dHx/dy\s*\n\s*Ez\[idx\] \+= Cb \* \(\(Hy\[idx_ip\] - Hy\[idx\]\) - \(Hx\[idx_jp\] - Hx\[idx\]\)\);",
-    re.S)
-GUARD_FIX_NEW = """uint idx = i + j * Nx + k * Nx * Ny;
-
-    if (isPEC[idx]) {
-        Ex[idx] = 0.0;
-        Ey[idx] = 0.0;
-        Ez[idx] = 0.0;
-        return;
-    }
-
-    // Per-component PEC guard: a component is held at zero only on the walls it is tangential to
-    // (and where its curl neighbours would fall outside the grid). The normal component on the far
-    // half-plane is updated like any interior node.
-    if (!(j == 0 || j >= Ny-1 || k == 0 || k >= Nz-1)) {
-        uint idx_jp = i + (j+1) * Nx + k * Nx * Ny;
-        uint idx_kp = i + j * Nx + (k+1) * Nx * Ny;
-        Ex[idx] += Cb * ((Hz[idx_jp] - Hz[idx]) - (Hy[idx_kp] - Hy[idx]));
-    }
-    if (!(i == 0 || i >= Nx-1 || k == 0 || k >= Nz-1)) {
-        uint idx_kp = i + j * Nx + (k+1) * Nx * Ny;
-        uint idx_ip = (i+1) + j * Nx + k * Nx * Ny;
-        Ey[idx] += Cb * ((Hx[idx_kp] - Hx[idx]) - (Hz[idx_ip] - Hz[idx]));
-    }
-    if (!(i == 0 || i >= Nx-1 || j == 0 || j >= Ny-1)) {
-        uint idx_ip = (i+1) + j * Nx + k * Nx * Ny;
-        uint idx_jp = i + (j+1) * Nx + k * Nx * Ny;
-        Ez[idx] += Cb * ((Hy[idx_ip] - Hy[idx]) - (Hx[idx_jp] - Hx[idx]));
-    }"""
+PATCHES = exlib.lib_module("lib/fdtd/backends/loopfdtd_patches.py")
 
 
 def stage(t):
@@ -256,7 +223,7 @@ def generate_swift(src: Path, dst: Path, nsteps: int, guard_fix: bool) -> dict:
     text, n["snapshots"] = re.subn(r"let snapshotInterval = \d+", "let snapshotInterval = 1000000", text)
     text, n["spread"] = re.subn(r"let spread: Float = 3\.0 / designFreq", f"let spread: Float = {SPREAD_PERIODS} / designFreq", text)
     if guard_fix:
-        text, n["guard"] = GUARD_FIX_OLD.subn(lambda mo: GUARD_FIX_NEW, text)
+        text, n["guard"] = PATCHES.guard_fix(text)
     dst.write_text(text)
     return n
 

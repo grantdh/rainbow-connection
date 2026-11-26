@@ -123,6 +123,17 @@ def load1() -> float:
     return os.getloadavg()[0]
 
 
+def lock_mode() -> str:
+    """How `run` launches a solver now: "share" (MUPPET_SHARE=1: untimed correctness runs share the machine,
+    PROTOCOL section 9), "machlock" (serialised by the shared machine lock), or "guard" (waits for other sessions'
+    solvers first). The timing lock is honoured in every mode."""
+    if os.environ.get("MUPPET_SHARE") == "1":
+        return "share"
+    if MACHLOCK.exists() and os.environ.get("MUPPET_NO_MACHLOCK") != "1":
+        return "machlock"
+    return "guard"
+
+
 def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, label: str = "",
         nice: int = 10, timeout: int = 3600, stdin_file: Path | None = None) -> tuple[int, float, str]:
     """Run a solver with low priority, record it in the shared run log, return (rc, wall_s, text)."""
@@ -132,8 +143,8 @@ def run(cmd: list[str], cwd: Path, log_file: Path, env: dict | None = None, labe
     argv = ["nice", "-n", str(nice)] + [str(c) for c in cmd]
     # MUPPET_SHARE=1: untimed correctness runs share the machine (PROTOCOL section 9): no machlock serialisation and no
     # wait for other sessions' solvers. The timing lock (~/Dev/.timing-lock) is honoured in every mode.
-    share = os.environ.get("MUPPET_SHARE") == "1"
-    locked = MACHLOCK.exists() and not share and os.environ.get("MUPPET_NO_MACHLOCK") != "1"
+    mode = lock_mode()
+    share, locked = mode == "share", mode == "machlock"
     wait_for_timing_lock()
     if locked:
         argv = ["/opt/homebrew/bin/python3", str(MACHLOCK), "bench", "--"] + argv
@@ -218,14 +229,20 @@ def lorentz_eps(energy_eV: np.ndarray, eps_inf: float, poles: list[dict]) -> np.
     return eps
 
 
-def converter():
-    """rainbow-connection's Lorentz fitter (lib/converters/yambo_eps_to_meep.py), loaded by path."""
+def lib_module(relpath: str):
+    """A rainbow-connection module loaded by path (relative to the repo root), named after its file, without
+    touching sys.path; e.g. lib_module("lib/converters/yambo_eps_to_meep.py")."""
     import importlib.util
-    path = REPO_ROOT / "lib/converters/yambo_eps_to_meep.py"
-    spec = importlib.util.spec_from_file_location("yambo_eps_to_meep", path)
+    path = REPO_ROOT / relpath
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
+
+
+def converter():
+    """rainbow-connection's Lorentz fitter (lib/converters/yambo_eps_to_meep.py), loaded by path."""
+    return lib_module("lib/converters/yambo_eps_to_meep.py")
 
 
 # --------------------------------------------------------------------------- optics
